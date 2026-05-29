@@ -72,7 +72,11 @@ struct SupportRootView: View {
                 client.present()
             }
         }
-        .btxClient(client, title: "Support")
+        .btxClient(
+            client,
+            title: "Support",
+            teamDisplayName: "Escargot Team"
+        )
     }
 }
 ```
@@ -180,6 +184,12 @@ The current theming surface covers:
 - thread-intro text
 - empty-state logo and accent treatment
 
+Pass `teamDisplayName` to control the pre-reply thread header, such as
+`Chat with Escargot Team`. Once an operator replies, the thread header switches
+to the responder identity returned by BTX. Before a responder replies, BTX may
+include a project support-team roster; the SDK renders only members with avatar
+image URLs and does not create initial placeholders for that roster.
+
 The composer layout and chat bubble structure intentionally stay BTX-owned.
 
 ## Image attachments
@@ -211,24 +221,29 @@ Push setup has three parts:
 
 1. In BTX desktop, go to `Customer Messages -> Clients`, create or update an `iOS` client, then save the app name, bundle ID, Apple Team ID, APNs Auth Key ID, and APNs Auth Key `.p8`.
 2. In Xcode, enable `Push Notifications` and `Background Modes` with `Remote notifications` for the same bundle ID.
-3. In the host app, request notification permission, register with APNs, and forward APNs callbacks into `BTXClient`.
+3. In the host app, forward APNs callbacks into `BTXClient`.
 
-### Request permission and register with APNs
+### Notification permission
+
+By default, `BTXClientKit` asks for notification authorization the first time
+the messenger is presented. If permission was already granted, the SDK calls
+`UIApplication.registerForRemoteNotifications()` so the host app receives a
+fresh APNs token.
+
+Hosts that want to own the permission prompt can disable this:
 
 ```swift
-import UIKit
-import UserNotifications
-
-@MainActor
-func enableBTXPush() async {
-    let center = UNUserNotificationCenter.current()
-    let granted = try? await center.requestAuthorization(options: [.alert, .badge, .sound])
-    guard granted == true else { return }
-    UIApplication.shared.registerForRemoteNotifications()
-}
+let configuration = BTXClientConfiguration(
+    publishableClientKey: "client_key",
+    customer: customer,
+    appContext: appContext,
+    push: BTXClientPushConfiguration(
+        automaticallyRequestsAuthorization: false
+    )
+)
 ```
 
-Call `await enableBTXPush()` once after the host app has a long-lived `BTXClient` for the current signed-in customer.
+When automatic authorization is disabled, the host app is responsible for requesting notification permission and calling `UIApplication.registerForRemoteNotifications()`.
 
 ### Forward APNs events into the SDK
 
@@ -314,4 +329,4 @@ Use the push APIs as follows:
 - `handleNotificationResponse(_:)` for notification taps so the SDK can present the messenger and open the correct thread
 - `unregisterPushDevice()` before discarding the messenger when the signed-in customer changes or signs out
 
-The host app still owns requesting notification permission and calling `UIApplication.registerForRemoteNotifications()`. The APNs token you forward must come from a bundle ID that exactly matches the bundle ID configured on the BTX client. Debug builds register as `development` automatically. TestFlight and App Store builds register as `production`.
+The APNs token you forward must come from a bundle ID that exactly matches the bundle ID configured on the BTX client. Debug builds register as `development` automatically. TestFlight and App Store builds register as `production`.
