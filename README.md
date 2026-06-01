@@ -136,29 +136,34 @@ Use launch context when you want BTX to know why the user opened the thread:
 - `threadIntro` renders customer-visible context at the top of a new thread
 - `threadAttributes` carries hidden structured metadata for the operator side
 
-## Record host-app activity
+## Record host-app telemetry
 
-The SDK can also record customer activity from the host app:
+The SDK can also record customer activity from the host app through the
+canonical log pipeline:
 
 ```swift
-client.recordActivity(
-    BTXActivity(
-        kind: "order_detail_viewed",
-        title: "Viewed order detail",
-        detail: "Order 5019c8b5-fc51-4d90-8a4b-46e76fbed2e9",
-        attributes: [
-            "orderId": "5019c8b5-fc51-4d90-8a4b-46e76fbed2e9",
-            "orderStatus": "pending"
+await client.log(
+    BTXLogInput(
+        eventType: "order_detail.viewed",
+        level: .info,
+        message: "Viewed order detail",
+        body: [
+            "orderId": .string("5019c8b5-fc51-4d90-8a4b-46e76fbed2e9"),
+            "orderStatus": .string("pending"),
+            "surface": .string("order_detail")
         ]
     )
 )
 ```
 
-Use activity logging for high-signal host events such as:
+Use log telemetry for high-signal host events such as:
 
 - viewing an order or account screen
 - launching BTX from a specific flow
 - completing a purchase or support-relevant action
+
+Use `level: .info` for normal behavior telemetry. Use `.warning` or `.error`
+only when the host app explicitly knows a warning or error happened.
 
 ## Theme the customer surface
 
