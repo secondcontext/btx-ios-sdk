@@ -222,11 +222,12 @@ You do not need push notifications to:
 
 Only add push when you want replies to reach users while their app is backgrounded or closed.
 
-Push setup has three parts:
+Push setup has two platform parts:
 
 1. In BTX desktop, go to `Customer Messages -> Clients`, create or update an `iOS` client, then save the app name, bundle ID, Apple Team ID, APNs Auth Key ID, and APNs Auth Key `.p8`.
 2. In Xcode, enable `Push Notifications` and `Background Modes` with `Remote notifications` for the same bundle ID.
-3. In the host app, forward APNs callbacks into `BTXClient`.
+
+Once `BTXCustomerMessengerService` or `BTXCustomerMessengerPush.activateAutomaticHandling()` is initialized, the SDK automatically gives BTX customer-messenger push payloads first chance and forwards non-BTX notification callbacks to the host app's existing delegates unchanged.
 
 ### Notification permission
 
@@ -250,7 +251,43 @@ let configuration = BTXClientConfiguration(
 
 When automatic authorization is disabled, the host app is responsible for requesting notification permission and calling `UIApplication.registerForRemoteNotifications()`.
 
-### Forward APNs events into the SDK
+### APNs device token
+
+Forward the APNs device token to the SDK when your app delegate receives it. The SDK de-dupes repeated token values.
+
+```swift
+import UIKit
+import BTXClientKit
+
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    var client: BTXClient?
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        guard let client else { return }
+        Task {
+            try? await client.registerPushDeviceToken(deviceToken)
+        }
+    }
+}
+```
+
+When using `BTXCustomerMessengerService`, forward the token through the static facade instead:
+
+```swift
+func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+) {
+    BTXCustomerMessengerPush.setDeviceToken(deviceToken)
+}
+```
+
+### Manual APNs event forwarding
+
+Automatic notification routing is the preferred path. If your app cannot use SDK automatic handling, forward APNs events manually:
 
 ```swift
 import UIKit
@@ -271,16 +308,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
 
         return true
-    }
-
-    func application(
-        _ application: UIApplication,
-        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-    ) {
-        guard let client else { return }
-        Task {
-            try? await client.registerPushDeviceToken(deviceToken)
-        }
     }
 
     func application(
@@ -325,6 +352,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 ```
 
 Keep the same long-lived `BTXClient` instance available to the app delegate or push coordinator. All SDK push APIs should forward into that same client instance.
+When using `BTXCustomerMessengerService`, forward manual APNs events through the static `BTXCustomerMessengerPush` facade instead; it queues launch events until the service binds its runtime client.
 
 Use the push APIs as follows:
 
