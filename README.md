@@ -1,365 +1,268 @@
 # BTX iOS SDK
 
-`BTXClientKit` is the BTX iOS SDK for embedding BTX-powered customer conversations, thread context, activity logging, and branded support surfaces inside iOS apps.
+`BTXClientKit` is the BTX iOS SDK for customer-app telemetry and customer messaging. The host-facing API is the singleton `BTX` facade:
 
-The package targets iOS 17 or newer.
+```swift
+import BTXClientKit
 
-The public package is distributed as a Swift Package Manager wrapper around a versioned `BTXClientKit` XCFramework. Host apps only talk to BTX-owned HTTP and SSE endpoints. They do not receive Supabase credentials or vendor-specific realtime configuration.
+BTX.configure(...)
+BTX.identify(...)
+BTX.log(...)
+BTX.messenger.present()
+```
 
-## What ships today
+The package targets iOS 17 or newer. The public package is distributed as a Swift Package Manager wrapper around a versioned `BTXClientKit` XCFramework.
 
-The SDK currently includes:
-
-- a long-lived `BTXClient` runtime for the current signed-in customer
-- thread list and thread detail sync
-- creating new threads and sending follow-up messages
-- launch-time thread title, intro cards, and hidden thread attributes
-- host-side activity logging
-- image attachments in the built-in composer
-- runtime theming for the customer surface
-- optional APNs push delivery and notification routing
-
-## Add the package
+## Add The Package
 
 1. In Xcode, go to `File` then `Add Package Dependencies...`.
 2. Enter `https://github.com/secondcontext/btx-ios-sdk.git`.
 3. Select `BTXClientKit` and attach the library product to your app target.
 
-Choose the package requirement that matches how you want updates to land in your app. Use an exact version when you want manual control over each SDK upgrade, or a semantic-version rule when you want Xcode to pick up newer compatible tags automatically.
+## Configure
 
-## Configure the client
+Configure once at app startup and identify whenever the signed-in customer changes. The same customer identifier is used for logs and messenger threads.
 
 ```swift
-import SwiftUI
 import BTXClientKit
 
-private let clientConfiguration = BTXClientConfiguration(
-    apiBaseURL: URL(string: "https://your-btx-host.example.com")!,
-    appID: "app_123",
-    apiKey: "api_key_123",
-    customer: BTXCustomer(
-        externalID: "customer_123",
-        name: "Taylor",
-        email: "taylor@example.com"
-    ),
-    appContext: BTXAppContext(
-        appVersion: "1.0.0",
-        buildNumber: "42",
-        attributes: [
-            "platform": "ios",
-            "bundleId": "com.example.app"
-        ]
-    ),
-    theme: BTXClientTheme(
-        backgroundColor: .black,
-        primaryTextColor: .white,
-        secondaryTextColor: Color.white.opacity(0.7)
+@MainActor
+func configureBTX(for user: User) {
+    BTX.configure(
+        BTXConfiguration(
+            publishableClientKey: "cfk_...",
+            appContext: BTXAppContext(
+                appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
+                buildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+            )
+        )
     )
-)
 
-struct SupportRootView: View {
-    @StateObject private var client: BTXClient
-
-    init() {
-        _client = StateObject(
-            wrappedValue: BTXClient(configuration: clientConfiguration)
+    BTX.identify(
+        BTXCustomer(
+            externalID: user.id,
+            name: user.name,
+            email: user.email
         )
-    }
-
-    var body: some View {
-        NavigationStack {
-            Button("Open BTX") {
-                client.present()
-            }
-        }
-        .btxClient(
-            client,
-            title: "Support",
-            teamDisplayName: "Escargot Team"
-        )
-    }
+    )
 }
 ```
 
-Create one long-lived `BTXClient` for the current signed-in user, mount it once per app scene near the app root, then open it from your host-app entry points with `client.present(...)`.
+Use a stable customer ID from your app. Do not use a random install ID for signed-in users.
 
-Recreate the client only when one of these changes:
+## Log Telemetry
 
-- `apiBaseURL`
-- `appID`
-- `apiKey`
-- `customer.externalID`
-
-The configuration requires:
-
-- `apiBaseURL`
-- `appID`
-- `apiKey`
-- `customer`
-- `appContext`
-
-`projectID` is optional and is not required for the standard public SDK integration path.
-
-## Open a thread with BTX context
-
-Use `BTXLaunchContext` when the host app wants a new thread to open around a known topic:
+`BTX.log(...)` accepts immediately and sends later. It returns `.enqueued` from the static facade, not a network-delivery result. The SDK buffers logs until identity and runtime transport are ready.
 
 ```swift
-client.present(
-    launchContext: BTXLaunchContext(
-        entryPoint: "order_detail",
-        sourceType: "order",
-        sourceID: "order_123",
-        threadTitle: "Order Support",
-        threadIntro: .card(
-            title: "Ordered on Apr 30",
-            subtitle: "Printing tomorrow",
-            imageURL: "https://cdn.example.com/orders/order-123.jpg"
-        ),
-        threadAttributes: [
-            "user": .object([
-                "id": .string("user_123")
-            ]),
-            "order": .object([
-                "id": .string("order_123"),
-                "status": .string("pending"),
-                "adminURL": .string("https://internal.example.com/orders/order_123")
-            ])
+BTX.log(
+    "checkout_started",
+    properties: [
+        "cartId": cart.id,
+        "itemIds": cart.items.map(\.id),
+        "totals": [
+            "subtotal": cart.subtotal,
+            "currency": cart.currency
         ]
+    ]
+)
+```
+
+Properties can be strings, ints, doubles, bools, `nil`, arrays, dictionaries keyed by `String`, or explicit `BTXJSONValue` values.
+
+## Present Messenger
+
+```swift
+BTX.messenger.present()
+```
+
+For a contextual entry point:
+
+```swift
+BTX.messenger.present(
+    route: .compose(
+        launchContext: BTXLaunchContext(
+            entryPoint: "order_detail",
+            sourceType: "order",
+            sourceID: order.id,
+            threadTitle: "Order Support",
+            threadIntro: .card(
+                title: "Order \(order.number)",
+                subtitle: order.status
+            ),
+            threadAttributes: [
+                "order": [
+                    "id": .string(order.id),
+                    "status": .string(order.status)
+                ]
+            ]
+        )
     )
 )
 ```
 
-Use launch context when you want BTX to know why the user opened the thread:
+## Push Notifications
 
-- `threadTitle` sets the thread title shown in the customer surface
-- `threadIntro` renders customer-visible context at the top of a new thread
-- `threadAttributes` carries hidden structured metadata for the operator side
+Push is optional. Messenger threads and foreground live updates work without APNs.
 
-## Record host-app telemetry
-
-The SDK can also record customer activity from the host app through the
-canonical log pipeline:
-
-```swift
-await client.log(
-    BTXLogInput(
-        eventType: "order_detail.viewed",
-        level: .info,
-        message: "Viewed order detail",
-        body: [
-            "orderId": .string("5019c8b5-fc51-4d90-8a4b-46e76fbed2e9"),
-            "orderStatus": .string("pending"),
-            "surface": .string("order_detail")
-        ]
-    )
-)
-```
-
-Use log telemetry for high-signal host events such as:
-
-- viewing an order or account screen
-- launching BTX from a specific flow
-- completing a purchase or support-relevant action
-
-Use `level: .info` for normal behavior telemetry. Use `.warning` or `.error`
-only when the host app explicitly knows a warning or error happened.
-
-## Theme the customer surface
-
-`BTXClientTheme` lets the host app make the customer messenger feel more native without rebuilding the UI shell:
-
-```swift
-theme: BTXClientTheme(
-    backgroundColor: .black,
-    primaryTextColor: .white,
-    secondaryTextColor: Color.white.opacity(0.7),
-    heroFont: .init(postScriptName: "AwesomeSerif-MediumTall"),
-    titleFont: .init(postScriptName: "BagossStandard-Medium"),
-    bodyFont: .init(postScriptName: "BagossStandard-Regular"),
-    emptyStateLogo: .init(assetName: "EscargotMark"),
-    emptyStateAccentColor: Color.green
-)
-```
-
-The current theming surface covers:
-
-- messenger background
-- key header and empty-state text
-- thread-intro text
-- empty-state logo and accent treatment
-
-Pass `teamDisplayName` to control the pre-reply thread header, such as
-`Chat with Escargot Team`. Once an operator replies, the thread header switches
-to the responder identity returned by BTX. Before a responder replies, BTX may
-include a project support-team roster; the SDK renders only members with avatar
-image URLs and does not create initial placeholders for that roster.
-
-The composer layout and chat bubble structure intentionally stay BTX-owned.
-
-## Image attachments
-
-The built-in composer supports attaching up to 4 images from the photo library. Image-only messages are allowed.
-
-The SDK prepares selected images before sending:
-
-- images are downsampled off the main actor
-- outgoing payloads are JPEG
-- each prepared image must fit under the SDK client-side size limit
-- attachments are sent with the existing `images` request key
-
-The CustomerMessenger API returns message attachments in thread payloads, and the SDK renders them in the conversation timeline.
-
-## Push notifications are optional
-
-You do not need push notifications to:
-
-- install `BTXClientKit`
-- mount `.btxClient(...)`
-- create and continue threads
-- receive live updates while the app is open
-- show foreground in-app toasts while the messenger is mounted
-
-Only add push when you want replies to reach users while their app is backgrounded or closed.
-
-Push setup has two platform parts:
-
-1. In BTX desktop, go to `Customer Messages -> Clients`, create or update an `iOS` client, then save the app name, bundle ID, Apple Team ID, APNs Auth Key ID, and APNs Auth Key `.p8`.
-2. In Xcode, enable `Push Notifications` and `Background Modes` with `Remote notifications` for the same bundle ID.
-
-Once `BTXCustomerMessengerService` or `BTXCustomerMessengerPush.activateAutomaticHandling()` is initialized, the SDK automatically gives BTX customer-messenger push payloads first chance and forwards non-BTX notification callbacks to the host app's existing delegates unchanged.
-
-### Notification permission
-
-By default, `BTXClientKit` asks for notification authorization the first time
-the messenger is presented. If permission was already granted, the SDK calls
-`UIApplication.registerForRemoteNotifications()` so the host app receives a
-fresh APNs token.
-
-Hosts that want to own the permission prompt can disable this:
-
-```swift
-let configuration = BTXClientConfiguration(
-    publishableClientKey: "client_key",
-    customer: customer,
-    appContext: appContext,
-    push: BTXClientPushConfiguration(
-        automaticallyRequestsAuthorization: false
-    )
-)
-```
-
-When automatic authorization is disabled, the host app is responsible for requesting notification permission and calling `UIApplication.registerForRemoteNotifications()`.
-
-### APNs device token
-
-Forward the APNs device token to the SDK when your app delegate receives it. The SDK de-dupes repeated token values.
-
-```swift
-import UIKit
-import BTXClientKit
-
-final class AppDelegate: NSObject, UIApplicationDelegate {
-    var client: BTXClient?
-
-    func application(
-        _ application: UIApplication,
-        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-    ) {
-        guard let client else { return }
-        Task {
-            try? await client.registerPushDeviceToken(deviceToken)
-        }
-    }
-}
-```
-
-When using `BTXCustomerMessengerService`, forward the token through the static facade instead:
+If the host app receives APNs tokens, forward them to the messenger facade:
 
 ```swift
 func application(
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
 ) {
-    BTXCustomerMessengerPush.setDeviceToken(deviceToken)
+    Task { @MainActor in
+        BTX.messenger.setDeviceToken(deviceToken)
+    }
 }
 ```
 
-### Manual APNs event forwarding
-
-Automatic notification routing is the preferred path. If your app cannot use SDK automatic handling, forward APNs events manually:
+If the host app handles remote notifications manually, give BTX first chance for BTX messenger payloads:
 
 ```swift
-import UIKit
-import UserNotifications
-import BTXClientKit
-
-final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    var client: BTXClient?
-
-    func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
-    ) -> Bool {
-        UNUserNotificationCenter.current().delegate = self
-
-        if let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any] {
-            _ = client?.handleLaunchNotification(remoteNotification)
-        }
-
-        return true
+if BTX.isMessengerNotification(userInfo) {
+    Task { @MainActor in
+        _ = BTX.messenger.handleRemoteNotification(userInfo)
     }
-
-    func application(
-        _ application: UIApplication,
-        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
-        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
-    ) {
-        if client?.handleRemoteNotification(userInfo) == true {
-            completionHandler(.noData)
-            return
-        }
-
-        completionHandler(.noData)
-    }
-
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification,
-        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-    ) {
-        if client?.handleRemoteNotification(notification.request.content.userInfo) == true {
-            completionHandler([])
-            return
-        }
-
-        completionHandler([.banner, .badge, .sound])
-    }
-
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse,
-        withCompletionHandler completionHandler: @escaping () -> Void
-    ) {
-        if client?.handleNotificationResponse(response) == true {
-            completionHandler()
-            return
-        }
-
-        completionHandler()
-    }
+    completionHandler(.noData)
+    return
 }
 ```
 
-Keep the same long-lived `BTXClient` instance available to the app delegate or push coordinator. All SDK push APIs should forward into that same client instance.
-When using `BTXCustomerMessengerService`, forward manual APNs events through the static `BTXCustomerMessengerPush` facade instead; it queues launch events until the service binds its runtime client.
+By default the SDK requests notification authorization the first time messenger is presented. Hosts that own the permission prompt can disable this:
 
-Use the push APIs as follows:
+```swift
+BTXConfiguration(
+    publishableClientKey: "cfk_...",
+    messengerOptions: BTXMessengerOptions(
+        push: BTXPushConfiguration(
+            automaticallyRequestsAuthorization: false
+        )
+    )
+)
+```
 
-- `registerPushDeviceToken(_:)` when APNs gives the host app a device token
-- `handleLaunchNotification(_:)` from `launchOptions[.remoteNotification]` when the app cold-starts from a notification tap
-- `handleRemoteNotification(_:)` for incoming push payloads while the app is running
-- `handleNotificationResponse(_:)` for notification taps so the SDK can present the messenger and open the correct thread
-- `unregisterPushDevice()` before discarding the messenger when the signed-in customer changes or signs out
+## Minimal Integration Diffs
 
-The APNs token you forward must come from a bundle ID that exactly matches the bundle ID configured on the BTX client. Debug builds register as `development` automatically. TestFlight and App Store builds register as `production`.
+### Log Only
+
+```diff
++ import BTXClientKit
+
+  func applicationDidFinishLaunching() {
++     BTX.configure(
++         BTXConfiguration(
++             publishableClientKey: "cfk_...",
++             features: [.logs]
++         )
++     )
+  }
+
+  func didSignIn(user: User) {
++     BTX.identify(
++         BTXCustomer(
++             externalID: user.id,
++             name: user.name,
++             email: user.email
++         )
++     )
+  }
+
+  func trackCheckoutStarted(cart: Cart) {
++     BTX.log(
++         "checkout_started",
++         properties: [
++             "cartId": cart.id,
++             "itemIds": cart.items.map(\.id)
++         ]
++     )
+  }
+```
+
+### Messenger Only
+
+```diff
++ import BTXClientKit
+
+  func applicationDidFinishLaunching() {
++     BTX.configure(
++         BTXConfiguration(
++             publishableClientKey: "cfk_...",
++             features: [.messenger],
++             messengerOptions: BTXMessengerOptions(
++                 title: "Support",
++                 teamDisplayName: "Support Team"
++             )
++         )
++     )
+  }
+
+  func didSignIn(user: User) {
++     BTX.identify(
++         BTXCustomer(
++             externalID: user.id,
++             name: user.name,
++             email: user.email
++         )
++     )
+  }
+
+  func openSupport() {
++     BTX.messenger.present()
+  }
+```
+
+### Logs And Messenger
+
+```diff
++ import BTXClientKit
+
+  func applicationDidFinishLaunching() {
++     BTX.configure(
++         BTXConfiguration(
++             publishableClientKey: "cfk_...",
++             messengerOptions: BTXMessengerOptions(
++                 title: "Support",
++                 teamDisplayName: "Support Team"
++             )
++         )
++     )
+  }
+
+  func didSignIn(user: User) {
++     BTX.identify(BTXCustomer(externalID: user.id, name: user.name, email: user.email))
+  }
+
+  func trackCheckoutStarted(cart: Cart) {
++     BTX.log("checkout_started", properties: ["cartId": cart.id])
+  }
+
+  func openSupport() {
++     BTX.messenger.present()
+  }
+```
+
+## Public Surface
+
+- `BTX.configure(_:)`
+- `BTX.identify(_:)`
+- `BTX.log(_:)`
+- `BTX.messenger`
+- `BTX.isMessengerNotification(_:)`
+- `BTXConfiguration`
+- `BTXCustomer`
+- `BTXAppContext`
+- `BTXMessengerOptions`
+- `BTXPushConfiguration`
+- `BTXTheme`, `BTXColor`, `BTXFont`, `BTXImageResource`
+  - `BTXTheme.primaryCTAColor` controls primary action fill.
+  - `BTXTheme.primaryCTATextColor` controls primary action text and icon color.
+  - `BTXTheme.emptyStateLogo` controls the messenger home logo.
+- `BTXImageLoader`, `BTXImageLoadContext`
+- `BTXLogInput`, `BTXLogLevel`, `BTXLogDisposition`, `BTXLogValueConvertible`, `BTXJSONValue`
+- `BTXLaunchContext`, `BTXMessengerEntryPoint`, `BTXPresentationRoute`
+- `BTXThreadIntro`, `BTXThreadIntroRow`, `BTXThreadAttributeValue`, `BTXThreadAttribute`
+- `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
+
+`BTXRuntime` and the old `BTXCustomerMessenger*` client/service/view/modifier paths are implementation details, not host APIs.
