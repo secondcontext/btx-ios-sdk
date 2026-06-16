@@ -101,6 +101,10 @@ BTX.messenger.present(
 )
 ```
 
+## Messenger Image Attachments
+
+The messenger composer supports image attachments from paste, the native photo picker, and an inline recent-photo row. Add `NSPhotoLibraryUsageDescription` to the host app's `Info.plist` if you want the SDK to show recent photos directly above the composer. Without that permission description, customers can still use the native All Photos picker entry point when iOS allows it, but the inline recent-photo row will not be populated.
+
 ## Push Notifications
 
 Push is optional. Messenger threads and foreground live updates work without APNs.
