@@ -34,6 +34,10 @@ func configureBTX(for user: User) {
             appContext: BTXAppContext(
                 appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
                 buildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+            ),
+            features: [.logs, .messenger],
+            messengerOptions: BTXMessengerOptions(
+                shakeForFeedbackEnabled: true
             )
         )
     )
@@ -49,6 +53,8 @@ func configureBTX(for user: User) {
 ```
 
 Use a stable customer ID from your app. Do not use a random install ID for signed-in users.
+
+Shake for feedback is off by default. Set `messengerOptions.shakeForFeedbackEnabled` to `true` (with `.messenger` enabled and a successful `BTX.identify(...)`) when you want a device shake to open the compact text feedback modal. This does not open the full messenger sheet; send creates a normal customer-message thread in the background.
 
 ## Log Telemetry
 
@@ -259,10 +265,20 @@ BTXConfiguration(
 - `BTXAppContext`
 - `BTXMessengerOptions`
 - `BTXPushConfiguration`
-- `BTXTheme`, `BTXColor`, `BTXFont`, `BTXImageResource`
+- `BTXTheme`, `BTXColor`, `BTXFont`, `BTXImageResource`,
+  `BTXPrimaryCTAStyle`, `BTXForegroundNotificationGlassStyle`
+  - `BTXTheme.backgroundColor` controls the messenger sheet background.
+  - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
+  - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor` independently theme conversation-history rows.
+  - `BTXTheme.emptyStateLogo` controls the messenger home logo.
+  - `BTXTheme.emptyStateLogoMaxWidth` and `emptyStateLogoMaxHeight` constrain that logo.
+  - `BTXTheme.emptyStateLogoToCTASpacing` controls the gap between the home logo and primary action.
   - `BTXTheme.primaryCTAColor` controls primary action fill.
   - `BTXTheme.primaryCTATextColor` controls primary action text and icon color.
-  - `BTXTheme.emptyStateLogo` controls the messenger home logo.
+  - `BTXTheme.primaryCTAStyle` supports `.glass` and `.solid`.
+  - Message bubble, composer, and foreground-notification colors can be themed for light host apps.
+  - The composer input uses only its Liquid Glass surface; it never adds a static outline around the interactive glass shape.
+  - Foreground notifications can use `.regular` or `.clear` Liquid Glass and a banner-specific logo.
 - `BTXImageLoader`, `BTXImageLoadContext`
 - `BTXLogInput`, `BTXLogLevel`, `BTXLogDisposition`, `BTXLogValueConvertible`, `BTXJSONValue`
 - `BTXLaunchContext`, `BTXMessengerEntryPoint`, `BTXPresentationRoute`
