@@ -37,7 +37,8 @@ func configureBTX(for user: User) {
             ),
             features: [.logs, .messenger],
             messengerOptions: BTXMessengerOptions(
-                shakeForFeedbackEnabled: true
+                shakeForFeedbackEnabled: true,
+                shakeForFeedbackScreenCaptureEnabled: true
             )
         )
     )
@@ -54,7 +55,7 @@ func configureBTX(for user: User) {
 
 Use a stable customer ID from your app. Do not use a random install ID for signed-in users.
 
-Shake for feedback is off by default. Set `messengerOptions.shakeForFeedbackEnabled` to `true` (with `.messenger` enabled and a successful `BTX.identify(...)`) when you want a device shake to open the compact feedback modal. Customers can type or attach up to four images from the system Photo picker, remove attachments before sending, and submit image-only feedback. Unsent text and images are discarded when the modal closes. This does not open the full messenger sheet; send creates a normal customer-message thread in the background.
+Shake for feedback is off by default. Set `messengerOptions.shakeForFeedbackEnabled` to `true` (with `.messenger` enabled and a customer identity) when you want a device shake to open the compact feedback modal. Customers can type or attach up to four images from the system Photo picker, remove attachments before sending, and submit image-only feedback. Set `shakeForFeedbackScreenCaptureEnabled` to `true` to capture the active app window before BTX appears and add it as a removable local draft. Captured and selected images upload only after Send; dismissing the modal discards them. Capture failure falls back to the normal composer. This does not open the full messenger sheet; send creates a normal customer-message thread in the background.
 
 ## Log Telemetry
 
