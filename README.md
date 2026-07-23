@@ -77,6 +77,30 @@ BTX.log(
 
 Properties can be strings, ints, doubles, bools, `nil`, arrays, dictionaries keyed by `String`, or explicit `BTXJSONValue` values.
 
+## Feature Flags
+
+Feature flags load automatically after the SDK has a customer identity. Reads are synchronous and use the supplied fallback until the first evaluation is available or when a key is unknown.
+
+```swift
+let isEnabled = BTX.featureFlags.isEnabled(
+    "settings.messenger-entry.enabled",
+    fallback: false
+)
+```
+
+Subscribe when host UI must update after an evaluation or identity change:
+
+```swift
+let featureFlagsCancellable = BTX.featureFlags.onChange { state in
+    isMessengerEntryEnabled = state.isEnabled(
+        "settings.messenger-entry.enabled",
+        fallback: false
+    )
+}
+```
+
+`BTX.featureFlags.refresh()` explicitly refreshes the current identity's evaluation. Feature flags return to the unloaded state whenever the SDK configuration or customer identity changes.
+
 ## Present Messenger
 
 ```swift
@@ -260,6 +284,8 @@ BTXConfiguration(
 - `BTX.identify(_:)`
 - `BTX.log(_:)`
 - `BTX.messenger`
+- `BTX.featureFlags`
+- `BTXFeatureFlagsState`
 - `BTX.isMessengerNotification(_:)`
 - `BTXConfiguration`
 - `BTXCustomer`
