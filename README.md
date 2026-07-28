@@ -37,8 +37,10 @@ func configureBTX(for user: User) {
             ),
             features: [.logs, .messenger],
             messengerOptions: BTXMessengerOptions(
-                shakeForFeedbackEnabled: true,
-                shakeForFeedbackScreenCaptureEnabled: true
+                feedback: BTXFeedbackOptions(
+                    onShake: .enabled(includeScreenCapture: true),
+                    onScreenshot: .enabled
+                )
             )
         )
     )
@@ -55,7 +57,31 @@ func configureBTX(for user: User) {
 
 Use a stable customer ID from your app. Do not use a random install ID for signed-in users.
 
-Shake for feedback is off by default. Set `messengerOptions.shakeForFeedbackEnabled` to `true` (with `.messenger` enabled and a customer identity) when you want a device shake to open the compact feedback modal. Customers can type or attach up to four images from the system Photo picker, remove attachments before sending, and submit image-only feedback. Set `shakeForFeedbackScreenCaptureEnabled` to `true` to capture the active app window before BTX appears and add it as a removable local draft. Captured and selected images upload only after Send; dismissing the modal discards them. Capture failure falls back to the normal composer. This does not open the full messenger sheet; send creates a normal customer-message thread in the background.
+Automatic feedback triggers are off by default. Enable `feedback.onShake` when
+you want a device shake to open the compact feedback composer, and choose
+whether that trigger should capture the active app window. Enable
+`feedback.onScreenshot` when the SDK should notice a user screenshot and show
+the dismissible “Send feedback about this screen?” prompt after the app is
+active and no messenger surface is open. Accepting the prompt opens the same
+compact composer with the captured app window as a removable local draft.
+
+Customers can type or attach up to four images from the system Photo picker,
+remove attachments before sending, and submit image-only feedback. Captured
+and selected images stay in memory and upload only after Send; dismissing the
+prompt or composer discards them. Capture failure never opens an empty
+screenshot prompt, while shake and manual capture failures still fall back to
+the normal composer. Submitting creates a normal customer-message thread in
+the background without opening the full messenger sheet.
+
+Host apps can expose that same compact composer from an explicit feedback
+button, even when shake detection is disabled:
+
+```swift
+BTX.messenger.presentFeedbackReport(includeScreenshot: true)
+```
+
+`includeScreenshot` controls only that presentation. The capture is a removable
+local draft and uploads only if the customer sends the report.
 
 ## Log Telemetry
 
@@ -291,18 +317,22 @@ BTXConfiguration(
 - `BTXCustomer`
 - `BTXAppContext`
 - `BTXMessengerOptions`
+- `BTXFeedbackOptions`
 - `BTXPushConfiguration`
-- `BTXTheme`, `BTXColor`, `BTXFont`, `BTXImageResource`,
+- `BTXTheme`, `BTXColorScheme`, `BTXColor`, `BTXFont`, `BTXImageResource`,
   `BTXPrimaryCTAStyle`, `BTXForegroundNotificationGlassStyle`
   - `BTXTheme.backgroundColor` controls the messenger sheet background.
   - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
   - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor` independently theme conversation-history rows.
   - `BTXTheme.emptyStateLogo` controls the messenger home logo.
+  - `BTXTheme.emptyStateShowsAppName` hides the generated app-name label when the supplied logo is already a complete wordmark.
   - `BTXTheme.emptyStateLogoMaxWidth` and `emptyStateLogoMaxHeight` constrain that logo.
   - `BTXTheme.emptyStateLogoToCTASpacing` controls the gap between the home logo and primary action.
   - `BTXTheme.primaryCTAColor` controls primary action fill.
   - `BTXTheme.primaryCTATextColor` controls primary action text and icon color.
   - `BTXTheme.primaryCTAStyle` supports `.glass` and `.solid`.
+  - `BTXTheme.colorScheme` supports `.system`, `.light`, and `.dark` for hosts
+    whose fixed palette must not follow the device appearance.
   - Message bubble, composer, and foreground-notification colors can be themed for light host apps.
   - The composer input uses only its Liquid Glass surface; it never adds a static outline around the interactive glass shape.
   - Foreground notifications can use `.regular` or `.clear` Liquid Glass and a banner-specific logo.
