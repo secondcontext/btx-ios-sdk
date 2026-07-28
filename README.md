@@ -65,13 +65,14 @@ the dismissible “Send feedback about this screen?” prompt after the app is
 active and no messenger surface is open. Accepting the prompt opens the same
 compact composer with the captured app window as a removable local draft.
 
-Customers can type or attach up to four images from the system Photo picker,
-remove attachments before sending, and submit image-only feedback. Captured
-and selected images stay in memory and upload only after Send; dismissing the
-prompt or composer discards them. Capture failure never opens an empty
-screenshot prompt, while shake and manual capture failures still fall back to
-the normal composer. Submitting creates a normal customer-message thread in
-the background without opening the full messenger sheet.
+Customers can type or attach negotiated photo and video media from the system
+Photo picker, preview and remove attachments before sending, and submit
+attachment-only feedback. Captured and selected media stays local and uploads
+only after Send; dismissing the prompt or composer discards it. Capture failure
+never opens an empty screenshot prompt, while shake and manual capture failures
+still fall back to the normal composer. Submitting creates a normal
+customer-message thread in the background without opening the full messenger
+sheet.
 
 Host apps can expose that same compact composer from an explicit feedback
 button, even when shake detection is disabled:
@@ -158,9 +159,9 @@ BTX.messenger.present(
 )
 ```
 
-## Messenger Image Attachments
+## Messenger Media Attachments
 
-The messenger composer supports image attachments from paste, the native photo picker, and an inline recent-photo row. Add `NSPhotoLibraryUsageDescription` to the host app's `Info.plist` if you want the SDK to show recent photos directly above the composer. When recent photos are unavailable, such as missing permission copy, denied access, restricted access, or not-yet-granted access, the image button opens the native photo picker directly instead of showing an empty recent-photo row.
+The messenger composer keeps attachment controls disabled until the SDK finishes negotiating attachment capabilities with the BTX messenger session. After negotiation, the composer only enables the image and video flows the backend allows for that customer session. Image flows remain available through paste, the native photo picker, and an inline recent-photo row when supported. Video attachments are selected through the native photo picker, validated locally against the negotiated video MIME allowlist, and sent as BTX-managed uploads. Add `NSPhotoLibraryUsageDescription` to the host app's `Info.plist` if you want the SDK to show recent photos directly above the composer. When recent photos are unavailable, such as missing permission copy, denied access, restricted access, or not-yet-granted access, the media button opens the native photo picker directly instead of showing an empty recent-photo row.
 
 ## Push Notifications
 
