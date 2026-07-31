@@ -161,7 +161,7 @@ BTX.messenger.present(
 
 ## Messenger Media Attachments
 
-The messenger composer keeps attachment controls disabled until the SDK finishes negotiating attachment capabilities with the BTX messenger session. After negotiation, the composer only enables the image and video flows the backend allows for that customer session. Image flows remain available through paste, the native photo picker, and an inline recent-photo row when supported. Video attachments are selected through the native photo picker, validated locally against the negotiated video MIME allowlist, and sent as BTX-managed uploads. Add `NSPhotoLibraryUsageDescription` to the host app's `Info.plist` if you want the SDK to show recent photos directly above the composer. When recent photos are unavailable, such as missing permission copy, denied access, restricted access, or not-yet-granted access, the media button opens the native photo picker directly instead of showing an empty recent-photo row.
+The messenger composer keeps attachment controls disabled until the SDK finishes negotiating attachment capabilities with the BTX messenger session. After negotiation, the composer only enables the image and video flows the backend allows for that customer session. Images remain available through paste and the native photo picker. Videos use the same picker, are validated locally against the negotiated video MIME allowlist, and are sent as BTX-managed uploads. The composer exposes one system photo-picker control and does not require full photo-library permission or an `NSPhotoLibraryUsageDescription` entry.
 
 ## Push Notifications
 
@@ -325,8 +325,7 @@ BTXConfiguration(
   - `BTXTheme.backgroundColor` controls the messenger sheet background.
   - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
   - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor` independently theme conversation-history rows.
-  - `BTXTheme.emptyStateLogo` controls the messenger home logo.
-  - `BTXTheme.emptyStateShowsAppName` hides the generated app-name label when the supplied logo is already a complete wordmark.
+  - `BTXTheme.emptyStateLogo` controls the messenger home artwork. When it resolves, the SDK shows it alone; otherwise the configured app name is the fallback.
   - `BTXTheme.emptyStateLogoMaxWidth` and `emptyStateLogoMaxHeight` constrain that logo.
   - `BTXTheme.emptyStateLogoToCTASpacing` controls the gap between the home logo and primary action.
   - `BTXTheme.primaryCTAColor` controls primary action fill.
