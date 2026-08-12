@@ -49,13 +49,27 @@ func configureBTX(for user: User) {
         BTXCustomer(
             externalID: user.id,
             name: user.name,
-            email: user.email
+            email: user.email,
+            phone: user.phoneE164
         )
     )
 }
 ```
 
-Use a stable customer ID from your app. Do not use a random install ID for signed-in users.
+Use a stable customer ID from your app. Do not use a random install ID for
+signed-in users. `phone` is optional; when supplied, normalize it to E.164.
+
+`BTXConfiguration` automatically enriches `appContext` with a privacy-safe
+runtime context at startup. It includes the host app name, bundle identifier,
+version and build, iOS version, Apple device family and model identifier, CPU
+architecture, and simulator state. It intentionally excludes the user-assigned
+device name, serial number, `identifierForVendor`, advertising identifiers, and
+other stable personal identifiers. When logs are enabled, the SDK also records
+one canonical, cross-platform `app.snapshot` telemetry event after the runtime starts. Host apps
+can use `BTXAppContext.current()` when they need the same standardized snapshot
+directly. The runtime context always includes the BTX SDK name and exact version:
+source checkouts report `development`, while published XCFramework builds report
+their release tag through `BTXClientKitVersion.current`.
 
 Automatic feedback triggers are off by default. Enable `feedback.onShake` when
 you want a device shake to open the compact feedback composer, and choose
@@ -72,7 +86,9 @@ only after Send; dismissing the prompt or composer discards it. Capture failure
 never opens an empty screenshot prompt, while shake and manual capture failures
 still fall back to the normal composer. Submitting creates a normal
 customer-message thread in the background without opening the full messenger
-sheet.
+sheet. The SDK marks that thread with `BTXConversationPurpose.feedback`, so BTX
+operator surfaces can distinguish it from a support request while keeping it
+replyable.
 
 Host apps can expose that same compact composer from an explicit feedback
 button, even when shake detection is disabled:
@@ -103,6 +119,41 @@ BTX.log(
 ```
 
 Properties can be strings, ints, doubles, bools, `nil`, arrays, dictionaries keyed by `String`, or explicit `BTXJSONValue` values.
+
+## Report Physical Devices
+
+Hosts only map their hardware-specific state into `BTXDeviceSnapshot`. The SDK owns
+coalescing, deduplication, lifecycle reasons, disconnect cancellation, and re-reporting
+an active device after the identified customer or BTX project changes.
+
+```swift
+BTX.deviceSnapshots.refresh(
+    connectionKey: peripheral.identifier.uuidString
+) {
+    BTXDeviceSnapshot(
+        identifiers: [
+            .vendorHardwareID(
+                wearable.hardwareID,
+                namespace: "example.hardware_uid"
+            ),
+            .serialNumber(
+                wearable.serialNumber,
+                namespace: "example.serial_number"
+            ),
+            .coreBluetoothPeripheralUUID(peripheral.identifier),
+        ],
+        manufacturer: "Example",
+        category: "wearable",
+        model: wearable.model,
+        firmwareVersion: wearable.firmwareVersion,
+        batteryPercent: wearable.batteryPercent
+    )
+}
+```
+
+The `connectionKey` stays local to the SDK and is never transmitted. Call
+`BTX.deviceSnapshots.disconnect(connectionKey:)` when that hardware connection ends.
+Never put pairing secrets, ownership tokens, or credentials in a device identifier.
 
 ## Feature Flags
 
@@ -140,6 +191,7 @@ For a contextual entry point:
 BTX.messenger.present(
     route: .compose(
         launchContext: BTXLaunchContext(
+            conversationPurpose: .support,
             entryPoint: "order_detail",
             sourceType: "order",
             sourceID: order.id,
@@ -317,6 +369,11 @@ BTXConfiguration(
 - `BTXConfiguration`
 - `BTXCustomer`
 - `BTXAppContext`
+- `BTXRuntimeContext`, `BTXHostAppRuntimeContext`,
+  `BTXOperatingSystemRuntimeContext`, `BTXHostDeviceRuntimeContext`,
+  `BTXRuntimeEnvironmentContext`, `BTXSDKRuntimeContext`, `BTXRuntimeIdentifier`
+- `BTXAppSnapshotReason`
+- `BTXClientKitVersion`
 - `BTXMessengerOptions`
 - `BTXFeedbackOptions`
 - `BTXPushConfiguration`
@@ -339,6 +396,7 @@ BTXConfiguration(
 - `BTXImageLoader`, `BTXImageLoadContext`
 - `BTXLogInput`, `BTXLogLevel`, `BTXLogDisposition`, `BTXLogValueConvertible`, `BTXJSONValue`
 - `BTXLaunchContext`, `BTXMessengerEntryPoint`, `BTXPresentationRoute`
+- `BTXConversationPurpose`
 - `BTXThreadIntro`, `BTXThreadIntroRow`, `BTXThreadAttributeValue`, `BTXThreadAttribute`
 - `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
 
