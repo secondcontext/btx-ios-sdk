@@ -390,9 +390,11 @@ BTXConfiguration(
   - `BTXTheme.primaryCTAStyle` supports `.glass` and `.solid`.
   - `BTXTheme.colorScheme` supports `.system`, `.light`, and `.dark` for hosts
     whose fixed palette must not follow the device appearance.
-  - Message bubble, composer, and foreground-notification colors can be themed for light host apps.
+  - Message bubble, composer, and foreground-notification colors can be themed for light host apps. When a themed host omits the incoming bubble color, the SDK derives a subtle fill from the primary text color so operator messages remain distinct from the page background.
   - The composer input uses only its Liquid Glass surface; it never adds a static outline around the interactive glass shape.
-  - Foreground notifications can use `.regular` or `.clear` Liquid Glass and a banner-specific logo.
+  - Foreground notifications show the replying operator's avatar when available,
+    with the banner-specific logo as a compact project badge. The same logo is
+    the fallback when no operator avatar is available.
 - `BTXImageLoader`, `BTXImageLoadContext`
 - `BTXLogInput`, `BTXLogLevel`, `BTXLogDisposition`, `BTXLogValueConvertible`, `BTXJSONValue`
 - `BTXLaunchContext`, `BTXMessengerEntryPoint`, `BTXPresentationRoute`
