@@ -100,6 +100,35 @@ BTX.messenger.presentFeedbackReport(includeScreenshot: true)
 `includeScreenshot` controls only that presentation. The capture is a removable
 local draft and uploads only if the customer sends the report.
 
+For contextual feedback on a host-owned item, identify the event subject and
+reuse a stable source identity in the launch context. Positive feedback can be
+submitted without UI, while negative feedback can open the compact follow-up
+composer:
+
+```swift
+let prompt = BTXFeedbackPrompt(
+    subject: "Nirva Card",
+    question: "What could be better?",
+    choices: ["Incorrect", "Not relevant to me"]
+)
+
+await BTX.messenger.submitFeedback(
+    rating: .positive,
+    subject: "Nirva Card",
+    launchContext: cardLaunchContext
+)
+
+BTX.messenger.presentFeedbackReport(
+    rating: .negative,
+    previousRating: .positive,
+    prompt: prompt,
+    launchContext: cardLaunchContext
+)
+```
+
+Passing `previousRating` records a rating change in the same source-scoped
+thread instead of presenting it as a new initial rating.
+
 ## Log Telemetry
 
 `BTX.log(...)` accepts immediately and sends later. It returns `.enqueued` from the static facade, not a network-delivery result. The SDK buffers logs until identity and runtime transport are ready.
@@ -381,7 +410,10 @@ BTXConfiguration(
   `BTXPrimaryCTAStyle`, `BTXForegroundNotificationGlassStyle`
   - `BTXTheme.backgroundColor` controls the messenger sheet background.
   - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
-  - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor` independently theme conversation-history rows.
+  - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor`
+    independently theme conversation-history rows. If a requested row fill
+    cannot maintain 4.5:1 contrast with both configured history text colors,
+    the SDK falls back to the themed surface color.
   - `BTXTheme.emptyStateLogo` controls the messenger home artwork. When it resolves, the SDK shows it alone; otherwise the configured app name is the fallback.
   - `BTXTheme.emptyStateLogoMaxWidth` and `emptyStateLogoMaxHeight` constrain that logo.
   - `BTXTheme.emptyStateLogoToCTASpacing` controls the gap between the home logo and primary action.
