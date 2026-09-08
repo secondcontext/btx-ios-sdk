@@ -72,12 +72,30 @@ source checkouts report `development`, while published XCFramework builds report
 their release tag through `BTXClientKitVersion.current`.
 
 Automatic feedback triggers are off by default. Enable `feedback.onShake` when
-you want a device shake to open the compact feedback composer, and choose
-whether that trigger should capture the active app window. Enable
+you want a deliberate device shake to open a compact confirmation sheet with
+one action for feedback or bugs and a shake toggle. Continuing opens the feedback
+composer; the keyboard stays hidden until the customer selects the text field.
+Choose whether that trigger captures the active app window before the prompt
+appears. Enable
 `feedback.onScreenshot` when the SDK should notice a user screenshot and show
 the dismissible “Send feedback about this screen?” prompt after the app is
 active and no messenger surface is open. Accepting the prompt opens the same
 compact composer with the captured app window as a removable local draft.
+
+Use `BTX.feedbackPreferences.isShakeEnabled` for the host Settings toggle. The
+observable preference is shared with the shake prompt, defaults to `true`, and
+persists on this installation across launches and sign-out. It does not override
+the host's `onShake` opt-in or the SDK's identity requirements. Turning it off
+stops motion updates; manual feedback and screenshot triggers remain available.
+
+Physical devices use Core Motion user acceleration, excluding gravity. BTX
+requires four alternating impulses above 2.2 g within 0.85 seconds, spanning at
+least 0.3 seconds, with a 2-second cooldown. It ignores the first 1.5 seconds of
+motion after activation and resets after sensor interruptions. Motion sampling
+stops while inactive or SDK UI is open. These are BTX tuning values, not an iOS
+standard; validate deliberate shaking, walking, opening the app and setting the
+phone down on physical devices before release. Simulator's Device > Shake tests
+the presentation flow and bypasses accelerometer classification.
 
 Customers can type or attach negotiated photo and video media from the system
 Photo picker, preview and remove attachments before sending, and submit
@@ -239,6 +257,48 @@ BTX.messenger.present(
     )
 )
 ```
+
+## Theme The Messenger
+
+Messenger and feedback sheets use untinted clear Liquid Glass over a neutral
+system blur on iOS 26. Their color comes from the host content behind them;
+`backgroundColor` no longer adds an opaque color wash to these floating sheets.
+Older iOS versions use the system blur alone. Native materials respond to the
+host appearance and system accessibility settings. Text, controls, chat bubbles,
+and branding still use `BTXTheme`. Foreground notifications also default to
+untinted clear glass with neutral blur; hosts can explicitly choose `.regular`
+or set `foregroundNotificationMaterialOpacity` to apply their notification tint.
+
+No theme is required. To choose a complete SDK appearance, use a preset:
+
+```swift
+let messengerOptions = BTXMessengerOptions(
+    theme: .dark
+)
+```
+
+For host branding, map the six semantic colors the SDK needs. The palette keeps
+the Messenger sheet, feedback form, bubbles, composer, controls, links, and
+foreground notifications aligned automatically:
+
+```swift
+let messengerOptions = BTXMessengerOptions(
+    theme: BTXTheme(
+        palette: BTXThemePalette(
+            background: BTXColor(red: 0.04, green: 0.05, blue: 0.06),
+            surface: BTXColor(red: 0.10, green: 0.11, blue: 0.12),
+            primaryText: BTXColor(red: 0.96, green: 0.97, blue: 0.98),
+            secondaryText: BTXColor(red: 0.68, green: 0.70, blue: 0.72),
+            accent: BTXColor(red: 0.36, green: 0.76, blue: 0.92),
+            accentForeground: BTXColor(red: 0.02, green: 0.03, blue: 0.04)
+        ),
+        colorScheme: .dark
+    )
+)
+```
+
+Use the detailed `BTXTheme` initializer only for deliberate per-surface
+exceptions such as custom artwork, fonts, or a special notification treatment.
 
 ## Messenger Media Attachments
 
@@ -406,15 +466,20 @@ BTXConfiguration(
 - `BTXMessengerOptions`
 - `BTXFeedbackOptions`
 - `BTXPushConfiguration`
-- `BTXTheme`, `BTXColorScheme`, `BTXColor`, `BTXFont`, `BTXImageResource`,
+- `BTXTheme`, `BTXThemePreset`, `BTXThemePalette`, `BTXColorScheme`,
+  `BTXColor`, `BTXFont`, `BTXImageResource`,
   `BTXPrimaryCTAStyle`, `BTXForegroundNotificationGlassStyle`
-  - `BTXTheme.backgroundColor` controls the messenger sheet background.
+  - `BTXTheme.light` and `.dark` provide complete appearances. Omit the theme
+    to keep the standard SDK appearance.
+  - `BTXThemePalette` maps six host-brand colors across every Messenger and
+    feedback surface.
+  - `BTXTheme.backgroundColor` controls embedded messenger backgrounds and derived theme colors. Floating sheets use neutral blur and untinted clear glass.
   - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
   - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor`
     independently theme conversation-history rows. If a requested row fill
     cannot maintain 4.5:1 contrast with both configured history text colors,
     the SDK falls back to the themed surface color.
-  - `BTXTheme.emptyStateLogo` controls the messenger home artwork. When it resolves, the SDK shows it alone; otherwise the configured app name is the fallback.
+  - `BTXTheme.emptyStateLogo` supplies shared artwork above the messenger home heading and in the new-message view. Homes without a logo omit the artwork; the new-message view uses a message symbol as its fallback.
   - `BTXTheme.emptyStateLogoMaxWidth` and `emptyStateLogoMaxHeight` constrain that logo.
   - `BTXTheme.emptyStateLogoToCTASpacing` controls the gap between the home logo and primary action.
   - `BTXTheme.primaryCTAColor` controls primary action fill.
@@ -423,6 +488,7 @@ BTXConfiguration(
   - `BTXTheme.colorScheme` supports `.system`, `.light`, and `.dark` for hosts
     whose fixed palette must not follow the device appearance.
   - Message bubble, composer, and foreground-notification colors can be themed for light host apps. When a themed host omits the incoming bubble color, the SDK derives a subtle fill from the primary text color so operator messages remain distinct from the page background.
+  - The standard appearance uses light customer bubbles with dark text and translucent operator bubbles with light text. Explicit host bubble colors remain supported. Outgoing links use the bubble text color with an underline to remain readable against the fill.
   - The composer input uses only its Liquid Glass surface; it never adds a static outline around the interactive glass shape.
   - Foreground notifications show the replying operator's avatar when available,
     with the banner-specific logo as a compact project badge. The same logo is
