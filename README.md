@@ -1,6 +1,7 @@
 # BTX iOS SDK
 
-`BTXClientKit` is the BTX iOS SDK for customer-app telemetry and customer messaging. The host-facing API is the singleton `BTX` facade:
+`BTXClientKit` is the BTX iOS SDK for customer-app telemetry, customer messaging,
+and in-app community. The host-facing API is the singleton `BTX` facade:
 
 ```swift
 import BTXClientKit
@@ -9,6 +10,7 @@ BTX.configure(...)
 BTX.identify(...)
 BTX.log(...)
 BTX.messenger.present()
+BTX.community.present()
 ```
 
 The package targets iOS 17 or newer. The public package is distributed as a Swift Package Manager wrapper around a versioned `BTXClientKit` XCFramework.
@@ -21,7 +23,9 @@ The package targets iOS 17 or newer. The public package is distributed as a Swif
 
 ## Configure
 
-Configure once at app startup and identify whenever the signed-in customer changes. The same customer identifier is used for logs and messenger threads.
+Configure once at app startup and identify whenever the signed-in customer
+changes. The same customer identifier is used for logs, messenger threads, and
+Community activity.
 
 ```swift
 import BTXClientKit
@@ -35,12 +39,18 @@ func configureBTX(for user: User) {
                 appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
                 buildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String
             ),
-            features: [.logs, .messenger],
+            features: [.logs, .messenger, .community],
             messengerOptions: BTXMessengerOptions(
                 feedback: BTXFeedbackOptions(
                     onShake: .enabled(includeScreenCapture: true),
                     onScreenshot: .enabled
                 )
+            ),
+            communityOptions: BTXCommunityOptions(
+                title: "Nirva Community",
+                welcomeTitle: "Help shape Nirva",
+                welcomeMessage: "Share ideas, support what matters, and hear directly from the Nirva team.",
+                teamDisplayName: "Nirva team"
             )
         )
     )
@@ -258,10 +268,30 @@ BTX.messenger.present(
 )
 ```
 
-## Theme The Messenger
+## Present Community
 
-Messenger and feedback sheets use untinted clear Liquid Glass over a neutral
-system blur on iOS 26. Their color comes from the host content behind them;
+Enable `.community`, identify the signed-in customer, then connect the host
+app's Community entry point to:
+
+```swift
+let result = BTX.community.present()
+```
+
+`BTX.community.present()` returns `BTXCommunityPresentationResult`. A failed
+result distinguishes disabled, unconfigured, unidentified, and unavailable
+states. The native sheet lets customers browse and create ideas, upvote ideas,
+comment, reply once to an original comment, and like comments. The feed shows
+comment counts without expanding discussions inline.
+
+Community uses `BTXCommunityOptions` for host copy and an optional theme. When
+`theme` is omitted, it inherits the same standard SDK appearance as Messenger.
+V1 intentionally excludes statuses, attachments, realtime updates,
+announcements, polls, and surveys.
+
+## Theme SDK Surfaces
+
+Messenger, feedback, and Community sheets use untinted clear Liquid Glass over
+a neutral system blur on iOS 26. Their color comes from the host content behind them;
 `backgroundColor` no longer adds an opaque color wash to these floating sheets.
 Older iOS versions use the system blur alone. Native materials respond to the
 host appearance and system accessibility settings. Text, controls, chat bubbles,
@@ -278,8 +308,8 @@ let messengerOptions = BTXMessengerOptions(
 ```
 
 For host branding, map the six semantic colors the SDK needs. The palette keeps
-the Messenger sheet, feedback form, bubbles, composer, controls, links, and
-foreground notifications aligned automatically:
+the Messenger and Community sheets, feedback form, bubbles, composers,
+controls, links, and foreground notifications aligned automatically:
 
 ```swift
 let messengerOptions = BTXMessengerOptions(
@@ -452,6 +482,7 @@ BTXConfiguration(
 - `BTX.identify(_:)`
 - `BTX.log(_:)`
 - `BTX.messenger`
+- `BTX.community`
 - `BTX.featureFlags`
 - `BTXFeatureFlagsState`
 - `BTX.isMessengerNotification(_:)`
@@ -464,6 +495,9 @@ BTXConfiguration(
 - `BTXAppSnapshotReason`
 - `BTXClientKitVersion`
 - `BTXMessengerOptions`
+- `BTXCommunityOptions`
+- `BTXCommunityIdea`, `BTXCommunityReply`
+- `BTXCommunityPresentationResult`, `BTXCommunityPresentationFailure`
 - `BTXFeedbackOptions`
 - `BTXPushConfiguration`
 - `BTXTheme`, `BTXThemePreset`, `BTXThemePalette`, `BTXColorScheme`,
@@ -471,9 +505,9 @@ BTXConfiguration(
   `BTXPrimaryCTAStyle`, `BTXForegroundNotificationGlassStyle`
   - `BTXTheme.light` and `.dark` provide complete appearances. Omit the theme
     to keep the standard SDK appearance.
-  - `BTXThemePalette` maps six host-brand colors across every Messenger and
-    feedback surface.
-  - `BTXTheme.backgroundColor` controls embedded messenger backgrounds and derived theme colors. Floating sheets use neutral blur and untinted clear glass.
+  - `BTXThemePalette` maps six host-brand colors across every Messenger,
+    feedback, and Community surface.
+  - `BTXTheme.backgroundColor` controls embedded messenger backgrounds and derived theme colors. Floating Messenger, feedback, and Community sheets use neutral blur and untinted clear glass.
   - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
   - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor`
     independently theme conversation-history rows. If a requested row fill
@@ -501,3 +535,37 @@ BTXConfiguration(
 - `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
 
 `BTXRuntime` and the old `BTXCustomerMessenger*` client/service/view/modifier paths are implementation details, not host APIs.
+
+## Feedback Center
+
+After `BTX.configure` and `BTX.identify` (or `BTX.identifyAnonymous`), present the
+project's feedback board with `BTX.feedbackCenter.present()`. The board uses the
+SDK's customer session and does not require opening the messenger.
+
+```swift
+BTXFeedbackCenterButton(session: BTX.feedbackCenter, theme: appTheme) {
+    Label("Add Feedback", systemImage: "plus")
+}
+```
+
+For host-owned presentation, use `BTXFeedbackCenterView(session: BTX.feedbackCenter,
+theme: appTheme)` inside a sheet. Set `messengerOptions.showsFeedbackCenter = true`
+to include the entry in messenger home/history. Backend availability is separately
+gated by the project's `feedbackCenter` capability.
+
+Ideas and customer comments display no participant identities. Operator replies
+use **Team**. Ideas, comments, and votes appear immediately and reconcile with the
+server. Submissions sync in the background; failures keep their text
+in place with **Retry**, using the same request ID to prevent duplicates. Unconfirmed
+submissions are session-local and do not survive app termination. The board refreshes
+when opened, foregrounded, or pulled to refresh; it does not subscribe to live events.
+Changing project or customer identity clears the board's local state and drafts.
+
+### Local fixtures
+
+Debug builds expose `BTXFeedbackCenterPreview` through
+`@_spi(BTXClientKitTesting) import BTXClientKit`. Pass a retained preview to the same
+view/button components for an independent in-memory board without configuring BTX.
+Use `preview.reset()` or `preview.reset(empty: true)` to reset fixtures.
+`messengerOptions.feedbackCenterPreview = preview` overrides the messenger entry
+in debug builds. Fixture code is absent from release builds.
