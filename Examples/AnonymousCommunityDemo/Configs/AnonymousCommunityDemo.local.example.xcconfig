@@ -1,0 +1,4 @@
+// Copy this file to AnonymousCommunityDemo.local.xcconfig for machine-local overrides.
+// Replace this placeholder with your app's BTX publishable client key.
+// Never put a server secret in an iOS application.
+BTX_COMMUNITY_DEMO_PUBLISHABLE_CLIENT_KEY = YOUR_PUBLISHABLE_CLIENT_KEY

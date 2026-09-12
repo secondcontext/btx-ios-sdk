@@ -1,0 +1,2 @@
+#include "AnonymousCommunityDemo.shared.xcconfig"
+#include? "AnonymousCommunityDemo.local.xcconfig"

@@ -1,0 +1,6 @@
+.DS_Store
+Build/
+DerivedData/
+Configs/AnonymousCommunityDemo.local.xcconfig
+*.xcuserstate
+xcuserdata/

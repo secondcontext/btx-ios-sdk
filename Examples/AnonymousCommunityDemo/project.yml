@@ -1,0 +1,41 @@
+name: AnonymousCommunityDemo
+options:
+  createIntermediateGroups: true
+  defaultConfig: Debug
+configs:
+  Debug: debug
+  Release: release
+fileGroups:
+  - README.md
+  - Configs/AnonymousCommunityDemo.debug.xcconfig
+  - Configs/AnonymousCommunityDemo.release.xcconfig
+  - Configs/AnonymousCommunityDemo.shared.xcconfig
+  - Configs/AnonymousCommunityDemo.local.example.xcconfig
+packages:
+  BTXClientKit:
+    url: https://github.com/secondcontext/btx-ios-sdk.git
+    from: 3.0.0
+targets:
+  AnonymousCommunityDemo:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: AnonymousCommunityDemo
+    dependencies:
+      - package: BTXClientKit
+    configFiles:
+      Debug: Configs/AnonymousCommunityDemo.debug.xcconfig
+      Release: Configs/AnonymousCommunityDemo.release.xcconfig
+    settings:
+      base:
+        PRODUCT_NAME: Anonymy
+        PRODUCT_MODULE_NAME: AnonymousCommunityDemo
+        INFOPLIST_FILE: AnonymousCommunityDemo/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: 5.10
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        CODE_SIGN_STYLE: Automatic
+    scheme:
+      shared: true

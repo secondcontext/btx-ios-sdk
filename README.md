@@ -23,9 +23,12 @@ The package targets iOS 17 or newer. The public package is distributed as a Swif
 
 ## Configure
 
-Configure once at app startup and identify whenever the signed-in customer
-changes. The same customer identifier is used for logs, messenger threads, and
-Community activity.
+Configure once at app startup. Identify whenever the signed-in customer
+changes so logs, Messenger, and Community use that customer. If no customer is
+identified, Community automatically uses an anonymous member identity.
+
+Telemetry is opt-in. The default feature set enables Messenger only; add
+`.logs` when the host app intends to send runtime snapshots or custom logs.
 
 ```swift
 import BTXClientKit
@@ -69,8 +72,8 @@ func configureBTX(for user: User) {
 Use a stable customer ID from your app. Do not use a random install ID for
 signed-in users. `phone` is optional; when supplied, normalize it to E.164.
 
-`BTXConfiguration` automatically enriches `appContext` with a privacy-safe
-runtime context at startup. It includes the host app name, bundle identifier,
+When `.logs` is enabled, `BTXConfiguration` enriches `appContext` with a
+privacy-safe runtime context at startup. It includes the host app name, bundle identifier,
 version and build, iOS version, Apple device family and model identifier, CPU
 architecture, and simulator state. It intentionally excludes the user-assigned
 device name, serial number, `identifierForVendor`, advertising identifiers, and
@@ -270,23 +273,37 @@ BTX.messenger.present(
 
 ## Present Community
 
-Enable `.community`, identify the signed-in customer, then connect the host
-app's Community entry point to:
+Enable `.community`, then connect the host app's Community entry point to:
 
 ```swift
+BTX.configure(
+    BTXConfiguration(
+        publishableClientKey: "cfk_...",
+        features: [.community]
+    )
+)
+
 let result = BTX.community.present()
 ```
 
+No identity call is required. The publishable client key identifies the project
+and scopes a random member identifier persisted on the device. The SDK sends no
+name or email. If the host later calls `BTX.identify`, Community uses that
+identified customer instead.
+
 `BTX.community.present()` returns `BTXCommunityPresentationResult`. A failed
-result distinguishes disabled, unconfigured, unidentified, and unavailable
-states. The native sheet lets customers browse and create ideas, upvote ideas,
+result distinguishes disabled, unconfigured, and unavailable states. The native
+sheet lets customers browse and create ideas, upvote ideas,
 comment, reply once to an original comment, and like comments. The feed shows
 comment counts without expanding discussions inline.
 
 Community uses `BTXCommunityOptions` for host copy and an optional theme. When
 `theme` is omitted, it inherits the same standard SDK appearance as Messenger.
-V1 intentionally excludes statuses, attachments, realtime updates,
-announcements, polls, and surveys.
+
+See the complete
+[Anonymy Community demo](https://github.com/secondcontext/btx-ios-sdk/tree/main/Examples/AnonymousCommunityDemo)
+for a Community-only SwiftUI host app with anonymous members and telemetry left
+off.
 
 ## Theme SDK Surfaces
 

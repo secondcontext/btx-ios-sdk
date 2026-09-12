@@ -1,0 +1,12 @@
+PRODUCT_NAME = Anonymy
+PRODUCT_BUNDLE_IDENTIFIER = so.btx.demo.anonymous-community
+MARKETING_VERSION = 1.0
+CURRENT_PROJECT_VERSION = 1
+SWIFT_VERSION = 5.10
+IPHONEOS_DEPLOYMENT_TARGET = 17.0
+CODE_SIGN_STYLE = Automatic
+TARGETED_DEVICE_FAMILY = 1
+
+// Replace this placeholder in AnonymousCommunityDemo.local.xcconfig with the
+// publishable client key created for your iOS app. Never add a server secret.
+BTX_COMMUNITY_DEMO_PUBLISHABLE_CLIENT_KEY = YOUR_PUBLISHABLE_CLIENT_KEY
