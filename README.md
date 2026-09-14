@@ -346,6 +346,8 @@ let messengerOptions = BTXMessengerOptions(
 
 Use the detailed `BTXTheme` initializer only for deliberate per-surface
 exceptions such as custom artwork, fonts, or a special notification treatment.
+Message bubble fills are flattened against the configured messenger background,
+so both incoming and outgoing bubbles remain opaque over busy host content.
 
 ## Messenger Media Attachments
 
@@ -539,7 +541,8 @@ BTXConfiguration(
   - `BTXTheme.colorScheme` supports `.system`, `.light`, and `.dark` for hosts
     whose fixed palette must not follow the device appearance.
   - Message bubble, composer, and foreground-notification colors can be themed for light host apps. When a themed host omits the incoming bubble color, the SDK derives a subtle fill from the primary text color so operator messages remain distinct from the page background.
-  - The standard appearance uses light customer bubbles with dark text and translucent operator bubbles with light text. Explicit host bubble colors remain supported. Outgoing links use the bubble text color with an underline to remain readable against the fill.
+  - Incoming and outgoing bubble fills are rendered opaquely. Translucent host bubble colors are first composited over `backgroundColor`, preserving their intended appearance without allowing live host content to show through.
+  - The standard appearance uses light customer bubbles with dark text and dark operator bubbles with light text. Explicit host bubble colors remain supported. Outgoing links use the bubble text color with an underline to remain readable against the fill.
   - The composer input uses only its Liquid Glass surface; it never adds a static outline around the interactive glass shape.
   - Foreground notifications show the replying operator's avatar when available,
     with the banner-specific logo as a compact project badge. The same logo is
