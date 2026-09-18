@@ -112,14 +112,23 @@ the presentation flow and bypasses accelerometer classification.
 
 Customers can type or attach negotiated photo and video media from the system
 Photo picker, preview and remove attachments before sending, and submit
-attachment-only feedback. Captured and selected media stays local and uploads
-only after Send; dismissing the prompt or composer discards it. Capture failure
-never opens an empty screenshot prompt, while shake and manual capture failures
-still fall back to the normal composer. Submitting creates a normal
-customer-message thread in the background without opening the full messenger
-sheet. The SDK marks that thread with `BTXConversationPurpose.feedback`, so BTX
-operator surfaces can distinguish it from a support request while keeping it
-replyable.
+attachment-only feedback. Opening an attached image starts a simple red marker
+with undo and redo; Done replaces that draft image with the marked-up copy.
+Image markup and resilient background delivery require `BTXClientKit 3.1.0`
+or later.
+Captured and selected media stays local and uploads only after Send; dismissing
+the prompt or composer discards it. Capture failure never opens an empty
+screenshot prompt, while shake and manual capture failures still fall back to
+the normal composer.
+
+Send durably saves the report on the device, closes the composer without a
+network spinner, and delivers it in the background while the app is active. If
+the device is offline or delivery fails, the SDK retries during the session and
+the next time the configured app becomes active. Pending reports are isolated
+to the configured project and identified customer. Successful delivery creates
+a normal customer-message thread without opening the full messenger sheet. The
+SDK marks that thread with `BTXConversationPurpose.feedback`, so BTX operator
+surfaces can distinguish it from a support request while keeping it replyable.
 
 Host apps can expose that same compact composer from an explicit feedback
 button, even when shake detection is disabled:
@@ -245,6 +254,12 @@ let featureFlagsCancellable = BTX.featureFlags.onChange { state in
 BTX.messenger.present()
 ```
 
+Messenger replies render the server's validated rich-text payload for bold,
+italic, underline, links, bulleted lists, and numbered lists. The SDK only uses
+the formatted payload when it reproduces the exact plain message body; invalid,
+unsafe, or mismatched payloads fall back to the existing plain-text renderer.
+Copy actions and notification previews continue to use the plain body.
+
 For a contextual entry point:
 
 ```swift
@@ -285,6 +300,10 @@ BTX.configure(
 
 let result = BTX.community.present()
 ```
+
+Use `BTXCommunityCenter.systemImageName` for the entry point icon. It returns
+the canonical `heart` SF Symbol so Community has a consistent identity across
+host apps.
 
 No identity call is required. The publishable client key identifies the project
 and scopes a random member identifier persisted on the device. The SDK sends no
@@ -555,37 +574,3 @@ BTXConfiguration(
 - `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
 
 `BTXRuntime` and the old `BTXCustomerMessenger*` client/service/view/modifier paths are implementation details, not host APIs.
-
-## Feedback Center
-
-After `BTX.configure` and `BTX.identify` (or `BTX.identifyAnonymous`), present the
-project's feedback board with `BTX.feedbackCenter.present()`. The board uses the
-SDK's customer session and does not require opening the messenger.
-
-```swift
-BTXFeedbackCenterButton(session: BTX.feedbackCenter, theme: appTheme) {
-    Label("Add Feedback", systemImage: "plus")
-}
-```
-
-For host-owned presentation, use `BTXFeedbackCenterView(session: BTX.feedbackCenter,
-theme: appTheme)` inside a sheet. Set `messengerOptions.showsFeedbackCenter = true`
-to include the entry in messenger home/history. Backend availability is separately
-gated by the project's `feedbackCenter` capability.
-
-Ideas and customer comments display no participant identities. Operator replies
-use **Team**. Ideas, comments, and votes appear immediately and reconcile with the
-server. Submissions sync in the background; failures keep their text
-in place with **Retry**, using the same request ID to prevent duplicates. Unconfirmed
-submissions are session-local and do not survive app termination. The board refreshes
-when opened, foregrounded, or pulled to refresh; it does not subscribe to live events.
-Changing project or customer identity clears the board's local state and drafts.
-
-### Local fixtures
-
-Debug builds expose `BTXFeedbackCenterPreview` through
-`@_spi(BTXClientKitTesting) import BTXClientKit`. Pass a retained preview to the same
-view/button components for an independent in-memory board without configuring BTX.
-Use `preview.reset()` or `preview.reset(empty: true)` to reset fixtures.
-`messengerOptions.feedbackCenterPreview = preview` overrides the messenger entry
-in debug builds. Fixture code is absent from release builds.
