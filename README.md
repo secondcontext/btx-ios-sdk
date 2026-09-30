@@ -1,7 +1,7 @@
 # BTX iOS SDK
 
 `BTXClientKit` is the BTX iOS SDK for customer-app telemetry, customer messaging,
-and in-app community. The host-facing API is the singleton `BTX` facade:
+in-app community, and the Help Center. The host-facing API is the singleton `BTX` facade:
 
 ```swift
 import BTXClientKit
@@ -11,6 +11,7 @@ BTX.identify(...)
 BTX.log(...)
 BTX.messenger.present()
 BTX.community.present()
+BTX.helpCenter.present()
 ```
 
 The package targets iOS 17 or newer. The public package is distributed as a Swift Package Manager wrapper around a versioned `BTXClientKit` XCFramework.
@@ -324,9 +325,65 @@ See the complete
 for a Community-only SwiftUI host app with anonymous members and telemetry left
 off.
 
+## Show the Help Center
+
+Help Center requires `BTXClientKit 3.2.0` or later. Enable `.helpCenter` and
+open the SDK-owned sheet from a host app entry point:
+
+```swift
+BTX.configure(
+    BTXConfiguration(
+        publishableClientKey: "cfk_...",
+        features: [.helpCenter],
+        helpCenterOptions: BTXHelpCenterOptions(
+            title: "Help Center",
+            sheetHeight: .half
+        )
+    )
+)
+
+let result = BTX.helpCenter.present()
+```
+
+`BTXHelpCenter.systemImageName` is `book.closed`. The sheet uses the same default
+appearance and page-sheet material as Messenger and Community. It shows published public
+articles grouped by category and section, supports search, and renders article
+formatting and media. Each article opens in its own sheet. Draft, archived, and
+internal articles stay hidden.
+`sheetHeight` starts at `.fullScreen` by default; choose `.quarter` or `.half`
+for a shorter starting height. Readers can drag between all three heights.
+The SDK requests short, plain answers with navigation, so those article sheets
+show native text immediately. Rich articles and larger help centers use the
+article loading path.
+The Help Center inherits `messengerOptions.theme` when its own theme is omitted.
+Set `BTXHelpCenterOptions(theme:)` to give it a different palette or font.
+
+For a host-owned SwiftUI layout, embed the view after configuration:
+
+```swift
+if let helpCenterView = BTX.helpCenter.view() {
+    helpCenterView
+}
+```
+
+To open a specific published article by its BTX article ID:
+
+```swift
+BTX.helpCenter.presentArticle(id: articleID)
+```
+
+The SDK finds the article in published navigation and opens its sheet. If the
+article is no longer published, Help Center shows an unavailable message.
+
+The publishable key resolves the project through the SDK's customer session.
+An identified customer is optional; the SDK uses a stable anonymous identity
+when none is available. The SDK reads the project ID from the session token, so
+the session JSON does not need a `projectId` field. Search falls back to matching
+published titles, sections, and excerpts if full-text search is unavailable.
+
 ## Theme SDK Surfaces
 
-Messenger, feedback, and Community sheets use untinted clear Liquid Glass over
+Messenger, feedback, Community, and Help Center sheets use untinted clear Liquid Glass over
 a neutral system blur on iOS 26. Their color comes from the host content behind them;
 `backgroundColor` no longer adds an opaque color wash to these floating sheets.
 Older iOS versions use the system blur alone. Native materials respond to the
@@ -344,7 +401,7 @@ let messengerOptions = BTXMessengerOptions(
 ```
 
 For host branding, map the six semantic colors the SDK needs. The palette keeps
-the Messenger and Community sheets, feedback form, bubbles, composers,
+the Messenger, Community, and Help Center sheets, feedback form, bubbles, composers,
 controls, links, and foreground notifications aligned automatically:
 
 ```swift
