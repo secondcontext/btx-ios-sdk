@@ -261,6 +261,13 @@ the formatted payload when it reproduces the exact plain message body; invalid,
 unsafe, or mismatched payloads fall back to the existing plain-text renderer.
 Copy actions and notification previews continue to use the plain body.
 
+In `BTXClientKit 3.2.1` and later, projects with the delayed response message
+enabled show the project's configured note when the customer's latest message
+remains unanswered for the configured delay. The note stays local to the
+conversation UI and is removed as soon as an operator reply arrives. Project
+administrators control the enabled state, message, and delay in BTX; no host-app
+configuration is required.
+
 For a contextual entry point:
 
 ```swift
