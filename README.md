@@ -51,10 +51,10 @@ func configureBTX(for user: User) {
                 )
             ),
             communityOptions: BTXCommunityOptions(
-                title: "Nirva Community",
-                welcomeTitle: "Help shape Nirva",
-                welcomeMessage: "Share ideas, support what matters, and hear directly from the Nirva team.",
-                teamDisplayName: "Nirva team"
+                title: "Community",
+                welcomeTitle: "Help shape our app",
+                welcomeMessage: "Share ideas, vote on suggestions, and hear from our team.",
+                teamDisplayName: "Our team"
             )
         )
     )
@@ -148,14 +148,14 @@ composer:
 
 ```swift
 let prompt = BTXFeedbackPrompt(
-    subject: "Nirva Card",
+    subject: "Recommendation card",
     question: "What could be better?",
     choices: ["Incorrect", "Not relevant to me"]
 )
 
 await BTX.messenger.submitFeedback(
     rating: .positive,
-    subject: "Nirva Card",
+    subject: "Recommendation card",
     launchContext: cardLaunchContext
 )
 
@@ -328,7 +328,7 @@ Community uses `BTXCommunityOptions` for host copy and an optional theme. When
 `theme` is omitted, it inherits the same standard SDK appearance as Messenger.
 
 See the complete
-[Anonymy Community demo](https://github.com/secondcontext/btx-ios-sdk/tree/main/Examples/AnonymousCommunityDemo)
+[Anonymous Community demo](https://github.com/secondcontext/btx-ios-sdk/tree/main/Examples/AnonymousCommunityDemo)
 for a Community-only SwiftUI host app with anonymous members and telemetry left
 off.
 
@@ -638,3 +638,69 @@ BTXConfiguration(
 - `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
 
 `BTXRuntime` and the old `BTXCustomerMessenger*` client/service/view/modifier paths are implementation details, not host APIs.
+
+## In-app campaigns
+
+Show targeted announcements as native cards and banners. Customers can open an
+HTTPS link or a public Help Center article from a campaign. Help Center actions
+require `.helpCenter`.
+
+In-app campaigns require BTXClientKit 3.3.0 or later and campaign access for your
+project. Check [GitHub Releases](https://github.com/secondcontext/btx-ios-sdk/releases)
+for available SDK versions.
+
+Add `.inAppCampaigns` to your configuration and identify the signed-in customer:
+
+```swift
+BTX.configure(BTXConfiguration(
+    publishableClientKey: "cfk_...",
+    features: [.inAppCampaigns, .helpCenter],
+    inAppCampaignOptions: BTXInAppCampaignOptions(theme: appTheme)
+))
+BTX.identify(BTXCustomer(externalID: user.id))
+
+// After sign-in is confirmed and the app screen is ready:
+BTX.inAppCampaigns.setPresentationReady(true)
+```
+
+Presentation defaults to disabled on each launch. The SDK waits two seconds after
+readiness and checks for an active window without a modal, keyboard, or another
+SDK presentation. Anonymous identities cannot receive campaigns. Repeated `true`
+calls do not restart the delay. Changing accounts or the publishable client key
+resets readiness; updating the same customer's profile does not.
+
+Before sign-out or account switching, cancel pending presentation, dismiss visible
+campaigns, and clear the identity:
+
+```swift
+BTX.inAppCampaigns.setPresentationReady(false)
+BTX.identify(nil)
+```
+
+The SDK attempts at most one campaign per cold launch, when the app starts a new
+process. Returning from the background does not trigger another campaign. An
+internet connection is required. Active campaigns are considered in queue order;
+paused campaigns keep their position when resumed. Content edits apply to pending
+deliveries. An app that has already reserved content for display keeps that version.
+If an edit invalidates the app's pending content, presentation waits until a later
+launch. Campaign interactions are saved across restarts and sent when connectivity
+is available. An uncertain presentation is not repeated.
+
+Campaigns inherit `messengerOptions.theme` unless you provide
+`BTXInAppCampaignOptions(theme:)`. Cards and banners use `titleFont` and `bodyFont`.
+Card actions also use `titleFont` and the Messenger primary CTA colors and style.
+Register custom fonts in your app before using them. Banner bodies show at most
+two lines; tapping the content opens the action, and the close button dismisses it.
+
+Artwork supports GIFs. Animation pauses while the app is inactive and uses a still
+frame with Reduce Motion. Animations exceeding 120 frames or 64 MiB of decoded
+pixels use their first frame.
+
+On iOS, `BTX.inAppCampaigns.preview(isBanner:title:body:imageURL:)` shows sample
+content without sending a campaign or recording interactions. Pass `true` for a
+banner or `false` for a card; an empty `imageURL` omits artwork. Keep preview controls
+in developer-only screens. Use a real test campaign to verify delivery and actions.
+
+See the [iOS integration guide](https://btx.so/docs/ios/in-app-campaigns) for setup
+and testing, and the [campaign guide](https://btx.so/docs/campaigns/in-app) for
+creating campaigns, managing audiences, and reviewing results.

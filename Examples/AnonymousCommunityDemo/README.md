@@ -1,6 +1,6 @@
-# Anonymy Community Demo
+# Anonymous Community demo
 
-Anonymy is a small SwiftUI reference app that shows how to add BTX Community
+This SwiftUI example shows how to add BTX Community
 without requiring accounts or enabling host-app telemetry.
 
 ## Run the app
