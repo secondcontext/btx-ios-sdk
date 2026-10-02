@@ -645,7 +645,7 @@ Show targeted announcements as native cards and banners. Customers can open an
 HTTPS link or a public Help Center article from a campaign. Help Center actions
 require `.helpCenter`.
 
-In-app campaigns require BTXClientKit 3.3.0 or later and campaign access for your
+In-app campaigns require BTXClientKit 3.3.1 or later and campaign access for your
 project. Check [GitHub Releases](https://github.com/secondcontext/btx-ios-sdk/releases)
 for available SDK versions.
 
@@ -666,7 +666,9 @@ BTX.inAppCampaigns.setPresentationReady(true)
 Presentation defaults to disabled on each launch. The SDK waits two seconds after
 readiness and checks for an active window without a modal, keyboard, or another
 SDK presentation. Anonymous identities cannot receive campaigns. Repeated `true`
-calls do not restart the delay. Changing accounts or the publishable client key
+calls do not restart the delay. Visible campaigns yield when the host opens a modal,
+starts text entry, begins a navigation transition, or becomes inactive. Host UI keeps priority.
+Changing accounts or the publishable client key
 resets readiness; updating the same customer's profile does not.
 
 Before sign-out or account switching, cancel pending presentation, dismiss visible
@@ -677,20 +679,30 @@ BTX.inAppCampaigns.setPresentationReady(false)
 BTX.identify(nil)
 ```
 
-The SDK attempts at most one campaign per cold launch, when the app starts a new
-process. Returning from the background does not trigger another campaign. An
-internet connection is required. Active campaigns are considered in queue order;
+The SDK automatically attempts at most one card or banner when the app launches
+and each time it returns from the background. On return, it waits two seconds and
+requires host readiness and a safe active window. An internet connection is required. Active campaigns are considered in queue order;
 paused campaigns keep their position when resumed. Content edits apply to pending
 deliveries. An app that has already reserved content for display keeps that version.
 If an edit invalidates the app's pending content, presentation waits until a later
-launch. Campaign interactions are saved across restarts and sent when connectivity
+launch or return from the background. Campaign interactions are saved across restarts and sent when connectivity
 is available. An uncertain presentation is not repeated.
+
+Tapping a campaign notification opens that campaign after the app is ready, including
+when returning from the background. The SDK checks the signed-in customer's eligibility
+and loads the current content. Paused, archived, or already-viewed campaigns do not open.
+Notification taps do not advance the automatic campaign queue or execute the card's action.
 
 Campaigns inherit `messengerOptions.theme` unless you provide
 `BTXInAppCampaignOptions(theme:)`. Cards and banners use `titleFont` and `bodyFont`.
 Card actions also use `titleFont` and the Messenger primary CTA colors and style.
 Register custom fonts in your app before using them. Banner bodies show at most
 two lines; tapping the content opens the action, and the close button dismisses it.
+
+Cards and banners prepare artwork before appearing, so images and text display
+together. Banners use the project logo when no custom artwork is set. If artwork
+cannot be loaded, the campaign stays hidden and can retry on a later launch or
+return from the background. Artwork downloads are limited to 10 MiB.
 
 Artwork supports GIFs. Animation pauses while the app is inactive and uses a still
 frame with Reduce Motion. Animations exceeding 120 frames or 64 MiB of decoded
