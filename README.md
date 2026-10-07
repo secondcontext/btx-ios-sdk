@@ -113,8 +113,13 @@ the presentation flow and bypasses accelerometer classification.
 
 Customers can type or attach negotiated photo and video media from the system
 Photo picker, preview and remove attachments before sending, and submit
-attachment-only feedback. Opening an attached image starts a simple red marker
-with undo and redo; Done replaces that draft image with the marked-up copy.
+attachment-only feedback. Opening an attached image starts the photo editor.
+BTXClientKit 3.4.0 adds drag-to-cover mosaic regions and a crop frame with
+adjustable corners alongside the red marker. Undo and redo cover all three
+tools. Done replaces the draft with a flattened JPEG; Cancel preserves the
+original draft and confirms before discarding edits. The editor uses native
+Liquid Glass controls on iOS 26 and standard controls on earlier versions.
+No host configuration or API changes are required.
 Image markup and resilient background delivery require `BTXClientKit 3.1.0`
 or later.
 Captured and selected media stays local and uploads only after Send; dismissing
