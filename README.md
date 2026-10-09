@@ -644,6 +644,9 @@ BTXConfiguration(
 
 `BTXRuntime` and the old `BTXCustomerMessenger*` client/service/view/modifier paths are implementation details, not host APIs.
 
+Cards without an image show text and actions without a logo or image placeholder.
+Only supplied card artwork is rendered; banners retain their project icon behavior.
+
 ## In-app campaigns
 
 Show targeted announcements as native cards and banners. Customers can open an
