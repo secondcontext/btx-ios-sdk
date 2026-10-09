@@ -14,7 +14,7 @@ fileGroups:
 packages:
   BTXClientKit:
     url: https://github.com/secondcontext/btx-ios-sdk.git
-    from: 3.4.2
+    from: 3.4.3
 targets:
   AnonymousCommunityDemo:
     type: application

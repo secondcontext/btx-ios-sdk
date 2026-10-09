@@ -702,7 +702,15 @@ and loads the current content. Paused, archived, or already-viewed campaigns do 
 Notification taps do not advance the automatic campaign queue or execute the card's action.
 
 Campaigns inherit `messengerOptions.theme` unless you provide
-`BTXInAppCampaignOptions(theme:)`. Cards and banners use `titleFont` and `bodyFont`.
+`BTXInAppCampaignOptions(theme:)`. Cards use `titleFont` and `bodyFont`.
+Banners share support notifications’ typography: `bodyFont` at 15 points semibold
+for titles and 13 points medium for message text. Banners without an action link
+remain fully legible and expose no action button.
+On iOS 26 and later, cards and banners use `foregroundNotificationGlassStyle`
+(`.clear` by default or `.regular`). Clear glass uses the shared SDK blur layer
+to keep content readable over the host screen. Campaigns also honor the foreground
+notification background, material opacity, and stroke settings. Card background
+dimming is separate from the glass style.
 Card actions also use `titleFont` and the Messenger primary CTA colors and style.
 Register custom fonts in your app before using them. Banner bodies show at most
 two lines; tapping the content opens the action, and the close button dismisses it.
