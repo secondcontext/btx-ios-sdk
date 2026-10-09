@@ -713,8 +713,9 @@ cannot be loaded, the campaign stays hidden and can retry on a later launch or
 return from the background. Artwork downloads are limited to 10 MiB.
 
 Artwork supports GIFs. Animation pauses while the app is inactive and uses a still
-frame with Reduce Motion. Animations exceeding 120 frames or 64 MiB of decoded
-pixels use their first frame.
+frame with Reduce Motion. Longer animations are sampled to at most 120 frames
+while preserving total playback duration. Frames are resized to keep decoded
+artwork within 64 MiB instead of silently replacing the animation with a still image.
 
 On iOS, `BTX.inAppCampaigns.preview(isBanner:title:body:imageURL:)` shows sample
 content without sending a campaign or recording interactions. Pass `true` for a
@@ -724,3 +725,10 @@ in developer-only screens. Use a real test campaign to verify delivery and actio
 See the [iOS integration guide](https://btx.so/docs/ios/in-app-campaigns) for setup
 and testing, and the [campaign guide](https://btx.so/docs/campaigns/in-app) for
 creating campaigns, managing audiences, and reviewing results.
+
+## Campaign diagnostics
+
+BTXClientKit 3.4.2 adds specific failure reasons and presentation stages to campaign diagnostics. With telemetry logs
+enabled, a matching event links the failure to its campaign and delivery attempt.
+Temporary screen interruptions defer the campaign until a later foreground
+activation. No additional host configuration is required.
