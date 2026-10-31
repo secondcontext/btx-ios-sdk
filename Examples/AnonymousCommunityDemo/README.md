@@ -30,5 +30,5 @@ the app does not call `BTX.identify`, Community automatically creates a stable
 anonymous member with no name or email. Because `.logs` is not enabled, the app
 does not opt in to BTX host-app telemetry.
 
-See the [Community integration guide](https://btx.secondcontext.com/docs/ios/community)
+See the [Community integration guide](https://btx.so/docs/ios/community)
 for theming and optional identified-customer setup.

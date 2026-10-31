@@ -24,6 +24,8 @@ The package targets iOS 17 or newer. The public package is distributed as a Swif
 
 ## Configure
 
+The hosted API and Help Center asset origin are `https://btx.so`.
+
 Configure once at app startup. Identify whenever the signed-in customer
 changes so logs, Messenger, and Community use that customer. If no customer is
 identified, Community automatically uses an anonymous member identity.
