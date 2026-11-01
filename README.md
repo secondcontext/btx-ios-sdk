@@ -447,6 +447,12 @@ The messenger composer keeps attachment controls disabled until the SDK finishes
 
 Push is optional. Messenger threads and foreground live updates work without APNs.
 
+When the app opens or returns to the foreground, unread support replies can show
+an in-app banner. Dismissing a reply or opening its conversation suppresses that
+reply's banner on the device across app restarts, without depending on a successful
+server read receipt. A newer reply can show a new banner. Read-state updates remove
+matching visible banners; dismissal alone leaves the conversation unread.
+
 If the host app receives APNs tokens, forward them to the messenger facade:
 
 ```swift
