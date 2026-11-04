@@ -1,6 +1,6 @@
-# BTX iOS SDK
+# BTX Apple SDK
 
-`BTXClientKit` is the BTX iOS SDK for customer-app telemetry, customer messaging,
+`BTXClientKit` is the BTX Apple SDK for customer-app telemetry, customer messaging,
 in-app community, and the Help Center. The host-facing API is the singleton `BTX` facade:
 
 ```swift
@@ -14,12 +14,102 @@ BTX.community.present()
 BTX.helpCenter.present()
 ```
 
-The package targets iOS 17 or newer. The public package is distributed as a Swift Package Manager wrapper around a versioned `BTXClientKit` XCFramework.
+The package targets iOS 17 or newer and macOS 13 or newer. Version 3.5.0 adds
+native macOS support to the same Swift Package Manager wrapper and versioned
+`BTXClientKit` XCFramework.
+
+## macOS integration
+
+Version 3.5.0 includes native macOS support and screenshot feedback for macOS 13
+or later. One XCFramework contains iOS device, iOS Simulator, and universal macOS
+(Apple silicon and Intel) variants.
+
+Configure and identify through the same `BTX` facade, with `.messenger` and
+optional `.logs`. Pass the host's `BTXTheme` through `BTXMessengerOptions.theme`.
+Register each SwiftUI host window once:
+
+```swift
+WindowGroup {
+    ContentView()
+        .btxMessenger()
+}
+```
+
+AppKit hosts register their window with `BTX.messenger.attach(to: window)`.
+`presentSupport()` opens support inside that registered window.
+`presentFeedbackReport(includeScreenshot: true)` presents feedback with a
+removable capture of that app window. Presentation returns `.failed(.unavailable)`
+when no registered window can host the UI. Registration does not create another
+SDK runtime or customer session.
+
+The macOS renderer uses shared theme colors for surfaces, message bubbles,
+composers, controls, links, history, and CTAs, plus body/title/hero font overrides
+and light/dark/system appearance. Native Liquid Glass is available on macOS 26;
+earlier supported systems use native controls. Sessions, sync, read receipts,
+image uploads, reactions, and telemetry use the shared customer-app runtime.
+The native iOS and macOS adapters share message ordering, optimistic sends,
+failed-draft recovery, image preprocessing, rich text, and the durable feedback
+outbox. Feedback confirmation means it was saved on this device for delivery;
+network failures retry while the app is active and after relaunch. Preparation
+or local-save failures retain the editable draft. Pending reports remain scoped
+to the original API, client, and customer.
+
+Community, Help Center, campaign UI, contextual rating sheets, video capture,
+and image markup remain iOS-only. Manual text/image feedback and programmatic
+feedback submission are available on macOS.
+
+### macOS reply notifications
+
+The macOS integration supports APNs notifications for support and feedback replies.
+Configure BTX before the app finishes launching, and forward the host app's APNs
+token from its existing `NSApplicationDelegate`:
+
+```swift
+import AppKit
+import BTXClientKit
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func application(
+        _ application: NSApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        BTX.messenger.setDeviceToken(deviceToken)
+    }
+}
+```
+
+Enable **Push Notifications** on the host app and use a matching signing profile.
+The SDK reads `com.apple.developer.aps-environment` from the signed app; it does
+not infer the macOS APNs environment from the build configuration. Set up a macOS
+client in BTX with the same bundle ID and its APNs credentials.
+
+The first support or feedback presentation requests notification permission by
+default. Set `BTXPushConfiguration(automaticallyRequestsAuthorization: false)`
+when the host owns permission timing and APNs registration. Keep the host's
+registration-failure callback for diagnostics.
+
+The SDK preserves the host notification delegate, including later replacements,
+and forwards unrelated notifications and notification-settings actions. BTX
+replies use native banners and sound in the foreground. A notification click
+waits for identification and a registered `.btxMessenger()` or AppKit host window,
+then activates that window and opens the exact conversation. Passive delivery
+and dismissal do not open it. The existing `BTX.handleNotificationResponse(_:)`
+and `BTX.messenger` notification forwarding APIs are also available on macOS.
+
+Before signing out or switching customers, await
+`BTX.messenger.unregisterPushDevice()` while the current identity is active,
+then call `BTX.identify(nil)` or identify the next customer. The shared lifecycle
+cancels stale registration tasks, replays cached tokens for the next identity,
+and clears pending notification navigation from the previous identity.
+
+Normal reply delivery and operator test pushes require production APNs
+registrations.
 
 ## Add The Package
 
 1. In Xcode, go to `File` then `Add Package Dependencies...`.
-2. Enter `https://github.com/secondcontext/btx-ios-sdk.git`.
+2. Enter `https://github.com/secondcontext/btx-ios-sdk.git` and select version 3.5.0 or later for macOS support.
 3. Select `BTXClientKit` and attach the library product to your app target.
 
 ## Configure
