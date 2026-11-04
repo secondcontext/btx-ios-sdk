@@ -1,118 +1,69 @@
-# BTX Apple SDK
+# BTX iOS and macOS SDK
 
-`BTXClientKit` is the BTX Apple SDK for customer-app telemetry, customer messaging,
-in-app community, and the Help Center. The host-facing API is the singleton `BTX` facade:
+`BTXClientKit` brings native customer messaging, Community, feedback, the Help
+Center, in-app campaigns, feature flags, and product telemetry to iOS apps.
+Version 3.5.0 adds native macOS support through the same Swift package.
 
-```swift
-import BTXClientKit
+| Platform | Minimum version | Capabilities |
+| --- | --- | --- |
+| iOS | iOS 17 | Messenger, feedback, Community, Help Center, campaigns, feature flags, telemetry, and push notifications. |
+| macOS | macOS 13 | Native Messenger, screenshot feedback, telemetry, and APNs reply notifications. |
 
-BTX.configure(...)
-BTX.identify(...)
-BTX.log(...)
-BTX.messenger.present()
-BTX.community.present()
-BTX.helpCenter.present()
-```
+One `BTXClientKit` XCFramework includes iOS device, iOS Simulator, and universal
+macOS binaries for Apple silicon and Intel. The package URL and product name
+are shared by both platforms.
 
-The package targets iOS 17 or newer and macOS 13 or newer. Version 3.5.0 adds
-native macOS support to the same Swift Package Manager wrapper and versioned
-`BTXClientKit` XCFramework.
+## Table of contents
 
-## macOS integration
+- [Add the package](#add-the-package)
+- [iOS integration](#ios-integration)
+  - [Configure and identify](#configure)
+  - [Present Messenger](#present-messenger)
+  - [Collect feedback](#collect-feedback)
+  - [Present Community](#present-community)
+  - [Show the Help Center](#show-the-help-center)
+  - [In-app campaigns](#in-app-campaigns)
+  - [Campaign diagnostics](#campaign-diagnostics)
+  - [Log telemetry](#log-telemetry)
+  - [Report physical devices](#report-physical-devices)
+  - [Feature flags](#feature-flags)
+  - [Theme SDK surfaces](#theme-sdk-surfaces)
+  - [Media attachments](#messenger-media-attachments)
+  - [Push notifications](#push-notifications)
+  - [Integration examples](#minimal-integration-diffs)
+- [macOS integration](#macos-integration)
+  - [Configure macOS](#configure-macos)
+  - [Register host windows](#register-host-windows)
+  - [Present support and feedback](#present-support-and-feedback)
+  - [macOS reply notifications](#macos-reply-notifications)
+- [Public surface](#public-surface)
+- [Documentation and releases](#documentation-and-releases)
 
-Version 3.5.0 includes native macOS support and screenshot feedback for macOS 13
-or later. One XCFramework contains iOS device, iOS Simulator, and universal macOS
-(Apple silicon and Intel) variants.
+## Add the package
 
-Configure and identify through the same `BTX` facade, with `.messenger` and
-optional `.logs`. Pass the host's `BTXTheme` through `BTXMessengerOptions.theme`.
-Register each SwiftUI host window once:
+1. In Xcode, select **File → Add Package Dependencies…**.
+2. Enter this package URL and select **3.5.0 or later**:
 
-```swift
-WindowGroup {
-    ContentView()
-        .btxMessenger()
-}
-```
+   ```text
+   https://github.com/secondcontext/btx-ios-sdk.git
+   ```
 
-AppKit hosts register their window with `BTX.messenger.attach(to: window)`.
-`presentSupport()` opens support inside that registered window.
-`presentFeedbackReport(includeScreenshot: true)` presents feedback with a
-removable capture of that app window. Presentation returns `.failed(.unavailable)`
-when no registered window can host the UI. Registration does not create another
-SDK runtime or customer session.
+3. Add the **BTXClientKit** product to your application target.
+4. [Create a publishable client key](https://btx.so/docs/publishable-keys) for
+   your app's platform and exact bundle ID.
 
-The macOS renderer uses shared theme colors for surfaces, message bubbles,
-composers, controls, links, history, and CTAs, plus body/title/hero font overrides
-and light/dark/system appearance. Native Liquid Glass is available on macOS 26;
-earlier supported systems use native controls. Sessions, sync, read receipts,
-image uploads, reactions, and telemetry use the shared customer-app runtime.
-The native iOS and macOS adapters share message ordering, optimistic sends,
-failed-draft recovery, image preprocessing, rich text, and the durable feedback
-outbox. Feedback confirmation means it was saved on this device for delivery;
-network failures retry while the app is active and after relaunch. Preparation
-or local-save failures retain the editable draft. Pending reports remain scoped
-to the original API, client, and customer.
+Use a separate SDK client and publishable key for each app with a different
+platform or bundle ID. Server credentials and APNs private keys stay out of
+the application bundle.
 
-Community, Help Center, campaign UI, contextual rating sheets, video capture,
-and image markup remain iOS-only. Manual text/image feedback and programmatic
-feedback submission are available on macOS.
+## iOS integration
 
-### macOS reply notifications
+Start with [Configure](#configure), then add the capabilities your app needs.
+The [full iOS documentation](https://btx.so/docs/ios) includes task-based guides
+and API reference. Examples that use `cart`, `order`, `peripheral`, or `wearable`
+refer to your app's own models.
 
-The macOS integration supports APNs notifications for support and feedback replies.
-Configure BTX before the app finishes launching, and forward the host app's APNs
-token from its existing `NSApplicationDelegate`:
-
-```swift
-import AppKit
-import BTXClientKit
-
-@MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    func application(
-        _ application: NSApplication,
-        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-    ) {
-        BTX.messenger.setDeviceToken(deviceToken)
-    }
-}
-```
-
-Enable **Push Notifications** on the host app and use a matching signing profile.
-The SDK reads `com.apple.developer.aps-environment` from the signed app; it does
-not infer the macOS APNs environment from the build configuration. Set up a macOS
-client in BTX with the same bundle ID and its APNs credentials.
-
-The first support or feedback presentation requests notification permission by
-default. Set `BTXPushConfiguration(automaticallyRequestsAuthorization: false)`
-when the host owns permission timing and APNs registration. Keep the host's
-registration-failure callback for diagnostics.
-
-The SDK preserves the host notification delegate, including later replacements,
-and forwards unrelated notifications and notification-settings actions. BTX
-replies use native banners and sound in the foreground. A notification click
-waits for identification and a registered `.btxMessenger()` or AppKit host window,
-then activates that window and opens the exact conversation. Passive delivery
-and dismissal do not open it. The existing `BTX.handleNotificationResponse(_:)`
-and `BTX.messenger` notification forwarding APIs are also available on macOS.
-
-Before signing out or switching customers, await
-`BTX.messenger.unregisterPushDevice()` while the current identity is active,
-then call `BTX.identify(nil)` or identify the next customer. The shared lifecycle
-cancels stale registration tasks, replays cached tokens for the next identity,
-and clears pending notification navigation from the previous identity.
-
-Normal reply delivery and operator test pushes require production APNs
-registrations.
-
-## Add The Package
-
-1. In Xcode, go to `File` then `Add Package Dependencies...`.
-2. Enter `https://github.com/secondcontext/btx-ios-sdk.git` and select version 3.5.0 or later for macOS support.
-3. Select `BTXClientKit` and attach the library product to your app target.
-
-## Configure
+### Configure
 
 The hosted API and Help Center asset origin are `https://btx.so`.
 
@@ -127,37 +78,30 @@ Telemetry is opt-in. The default feature set enables Messenger only; add
 import BTXClientKit
 
 @MainActor
-func configureBTX(for user: User) {
+func configureBTX() {
     BTX.configure(
         BTXConfiguration(
             publishableClientKey: "cfk_...",
-            appContext: BTXAppContext(
-                appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String,
-                buildNumber: Bundle.main.infoDictionary?["CFBundleVersion"] as? String
-            ),
-            features: [.logs, .messenger, .community],
-            messengerOptions: BTXMessengerOptions(
-                feedback: BTXFeedbackOptions(
-                    onShake: .enabled(includeScreenCapture: true),
-                    onScreenshot: .enabled
-                )
-            ),
-            communityOptions: BTXCommunityOptions(
-                title: "Community",
-                welcomeTitle: "Help shape our app",
-                welcomeMessage: "Share ideas, vote on suggestions, and hear from our team.",
-                teamDisplayName: "Our team"
-            )
+            features: [.messenger]
         )
     )
+}
+```
 
+Call `configureBTX()` once from your app's startup code. Add optional features
+such as `.logs`, `.community`, `.helpCenter`, or `.inAppCampaigns` to this same
+configuration when you enable them.
+
+#### Identify the customer
+
+Call this after sign-in or session restoration, using values from your app's
+customer account:
+
+```swift
+@MainActor
+func identifyBTXCustomer(id: String, name: String, email: String) {
     BTX.identify(
-        BTXCustomer(
-            externalID: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phoneE164
-        )
+        BTXCustomer(externalID: id, name: name, email: email)
     )
 }
 ```
@@ -176,6 +120,71 @@ can use `BTXAppContext.current()` when they need the same standardized snapshot
 directly. The runtime context always includes the BTX SDK name and exact version:
 source checkouts report `development`, while published XCFramework builds report
 their release tag through `BTXClientKitVersion.current`.
+
+### Present Messenger
+
+```swift
+BTX.messenger.present()
+```
+
+Messenger replies render the server's validated rich-text payload for bold,
+italic, underline, links, bulleted lists, and numbered lists. The SDK only uses
+the formatted payload when it reproduces the exact plain message body; invalid,
+unsafe, or mismatched payloads fall back to the existing plain-text renderer.
+Copy actions and notification previews continue to use the plain body.
+
+In `BTXClientKit 3.2.1` and later, projects with the delayed response message
+enabled show the project's configured note when the customer's latest message
+remains unanswered for the configured delay. The note stays local to the
+conversation UI and is removed as soon as an operator reply arrives. Project
+administrators control the enabled state, message, and delay in BTX; no host-app
+configuration is required.
+
+For a contextual entry point:
+
+```swift
+BTX.messenger.present(
+    route: .compose(
+        launchContext: BTXLaunchContext(
+            conversationPurpose: .support,
+            entryPoint: "order_detail",
+            sourceType: "order",
+            sourceID: order.id,
+            threadTitle: "Order Support",
+            threadIntro: .card(
+                title: "Order \(order.number)",
+                subtitle: order.status
+            ),
+            threadAttributes: [
+                "order": [
+                    "id": .string(order.id),
+                    "status": .string(order.status)
+                ]
+            ]
+        )
+    )
+)
+```
+
+### Collect feedback
+
+#### Enable automatic feedback
+
+Add these options to your startup `BTXConfiguration` to enable shake and
+screenshot feedback:
+
+```swift
+BTXConfiguration(
+    publishableClientKey: "cfk_...",
+    features: [.messenger],
+    messengerOptions: BTXMessengerOptions(
+        feedback: BTXFeedbackOptions(
+            onShake: .enabled(includeScreenCapture: true),
+            onScreenshot: .enabled
+        )
+    )
+)
+```
 
 Automatic feedback triggers are off by default. Enable `feedback.onShake` when
 you want a deliberate device shake to open a compact confirmation sheet with
@@ -228,8 +237,10 @@ a normal customer-message thread without opening the full messenger sheet. The
 SDK marks that thread with `BTXConversationPurpose.feedback`, so BTX operator
 surfaces can distinguish it from a support request while keeping it replyable.
 
-Host apps can expose that same compact composer from an explicit feedback
-button, even when shake detection is disabled:
+#### Open feedback from a button
+
+Open the compact composer from a feedback button, even when automatic triggers
+are disabled:
 
 ```swift
 BTX.messenger.presentFeedbackReport(includeScreenshot: true)
@@ -237,6 +248,8 @@ BTX.messenger.presentFeedbackReport(includeScreenshot: true)
 
 `includeScreenshot` controls only that presentation. The capture is a removable
 local draft and uploads only if the customer sends the report.
+
+#### Collect contextual feedback
 
 For contextual feedback on a host-owned item, identify the event subject and
 reuse a stable source identity in the launch context. Positive feedback can be
@@ -267,131 +280,7 @@ BTX.messenger.presentFeedbackReport(
 Passing `previousRating` records a rating change in the same source-scoped
 thread instead of presenting it as a new initial rating.
 
-## Log Telemetry
-
-`BTX.log(...)` accepts immediately and sends later. It returns `.enqueued` from the static facade, not a network-delivery result. The SDK buffers logs until identity and runtime transport are ready.
-
-```swift
-BTX.log(
-    "checkout_started",
-    properties: [
-        "cartId": cart.id,
-        "itemIds": cart.items.map(\.id),
-        "totals": [
-            "subtotal": cart.subtotal,
-            "currency": cart.currency
-        ]
-    ]
-)
-```
-
-Properties can be strings, ints, doubles, bools, `nil`, arrays, dictionaries keyed by `String`, or explicit `BTXJSONValue` values.
-
-## Report Physical Devices
-
-Hosts only map their hardware-specific state into `BTXDeviceSnapshot`. The SDK owns
-coalescing, deduplication, lifecycle reasons, disconnect cancellation, and re-reporting
-an active device after the identified customer or BTX project changes.
-
-```swift
-BTX.deviceSnapshots.refresh(
-    connectionKey: peripheral.identifier.uuidString
-) {
-    BTXDeviceSnapshot(
-        identifiers: [
-            .vendorHardwareID(
-                wearable.hardwareID,
-                namespace: "example.hardware_uid"
-            ),
-            .serialNumber(
-                wearable.serialNumber,
-                namespace: "example.serial_number"
-            ),
-            .coreBluetoothPeripheralUUID(peripheral.identifier),
-        ],
-        manufacturer: "Example",
-        category: "wearable",
-        model: wearable.model,
-        firmwareVersion: wearable.firmwareVersion,
-        batteryPercent: wearable.batteryPercent
-    )
-}
-```
-
-The `connectionKey` stays local to the SDK and is never transmitted. Call
-`BTX.deviceSnapshots.disconnect(connectionKey:)` when that hardware connection ends.
-Never put pairing secrets, ownership tokens, or credentials in a device identifier.
-
-## Feature Flags
-
-Feature flags load automatically after the SDK has a customer identity. Reads are synchronous and use the supplied fallback until the first evaluation is available or when a key is unknown.
-
-```swift
-let isEnabled = BTX.featureFlags.isEnabled(
-    "settings.messenger-entry.enabled",
-    fallback: false
-)
-```
-
-Subscribe when host UI must update after an evaluation or identity change:
-
-```swift
-let featureFlagsCancellable = BTX.featureFlags.onChange { state in
-    isMessengerEntryEnabled = state.isEnabled(
-        "settings.messenger-entry.enabled",
-        fallback: false
-    )
-}
-```
-
-`BTX.featureFlags.refresh()` explicitly refreshes the current identity's evaluation. Feature flags return to the unloaded state whenever the SDK configuration or customer identity changes.
-
-## Present Messenger
-
-```swift
-BTX.messenger.present()
-```
-
-Messenger replies render the server's validated rich-text payload for bold,
-italic, underline, links, bulleted lists, and numbered lists. The SDK only uses
-the formatted payload when it reproduces the exact plain message body; invalid,
-unsafe, or mismatched payloads fall back to the existing plain-text renderer.
-Copy actions and notification previews continue to use the plain body.
-
-In `BTXClientKit 3.2.1` and later, projects with the delayed response message
-enabled show the project's configured note when the customer's latest message
-remains unanswered for the configured delay. The note stays local to the
-conversation UI and is removed as soon as an operator reply arrives. Project
-administrators control the enabled state, message, and delay in BTX; no host-app
-configuration is required.
-
-For a contextual entry point:
-
-```swift
-BTX.messenger.present(
-    route: .compose(
-        launchContext: BTXLaunchContext(
-            conversationPurpose: .support,
-            entryPoint: "order_detail",
-            sourceType: "order",
-            sourceID: order.id,
-            threadTitle: "Order Support",
-            threadIntro: .card(
-                title: "Order \(order.number)",
-                subtitle: order.status
-            ),
-            threadAttributes: [
-                "order": [
-                    "id": .string(order.id),
-                    "status": .string(order.status)
-                ]
-            ]
-        )
-    )
-)
-```
-
-## Present Community
+### Present Community
 
 Enable `.community`, then connect the host app's Community entry point to:
 
@@ -429,7 +318,7 @@ See the complete
 for a Community-only SwiftUI host app with anonymous members and telemetry left
 off.
 
-## Show the Help Center
+### Show the Help Center
 
 Help Center requires `BTXClientKit 3.2.0` or later. Enable `.helpCenter` and
 open the SDK-owned sheet from a host app entry point:
@@ -485,267 +374,7 @@ when none is available. The SDK reads the project ID from the session token, so
 the session JSON does not need a `projectId` field. Search falls back to matching
 published titles, sections, and excerpts if full-text search is unavailable.
 
-## Theme SDK Surfaces
-
-Messenger, feedback, Community, and Help Center sheets use untinted clear Liquid Glass over
-a neutral system blur on iOS 26. Their color comes from the host content behind them;
-`backgroundColor` no longer adds an opaque color wash to these floating sheets.
-Older iOS versions use the system blur alone. Native materials respond to the
-host appearance and system accessibility settings. Text, controls, chat bubbles,
-and branding still use `BTXTheme`. Foreground notifications also default to
-untinted clear glass with neutral blur; hosts can explicitly choose `.regular`
-or set `foregroundNotificationMaterialOpacity` to apply their notification tint.
-
-No theme is required. To choose a complete SDK appearance, use a preset:
-
-```swift
-let messengerOptions = BTXMessengerOptions(
-    theme: .dark
-)
-```
-
-For host branding, map the six semantic colors the SDK needs. The palette keeps
-the Messenger, Community, and Help Center sheets, feedback form, bubbles, composers,
-controls, links, and foreground notifications aligned automatically:
-
-```swift
-let messengerOptions = BTXMessengerOptions(
-    theme: BTXTheme(
-        palette: BTXThemePalette(
-            background: BTXColor(red: 0.04, green: 0.05, blue: 0.06),
-            surface: BTXColor(red: 0.10, green: 0.11, blue: 0.12),
-            primaryText: BTXColor(red: 0.96, green: 0.97, blue: 0.98),
-            secondaryText: BTXColor(red: 0.68, green: 0.70, blue: 0.72),
-            accent: BTXColor(red: 0.36, green: 0.76, blue: 0.92),
-            accentForeground: BTXColor(red: 0.02, green: 0.03, blue: 0.04)
-        ),
-        colorScheme: .dark
-    )
-)
-```
-
-Use the detailed `BTXTheme` initializer only for deliberate per-surface
-exceptions such as custom artwork, fonts, or a special notification treatment.
-Message bubble fills are flattened against the configured messenger background,
-so both incoming and outgoing bubbles remain opaque over busy host content.
-
-## Messenger Media Attachments
-
-The messenger composer keeps attachment controls disabled until the SDK finishes negotiating attachment capabilities with the BTX messenger session. After negotiation, the composer only enables the image and video flows the backend allows for that customer session. Images remain available through paste and the native photo picker. Videos use the same picker, are validated locally against the negotiated video MIME allowlist, and are sent as BTX-managed uploads. The composer exposes one system photo-picker control and does not require full photo-library permission or an `NSPhotoLibraryUsageDescription` entry.
-
-## Push Notifications
-
-Push is optional. Messenger threads and foreground live updates work without APNs.
-
-When the app opens or returns to the foreground, unread support replies can show
-an in-app banner. Dismissing a reply or opening its conversation suppresses that
-reply's banner on the device across app restarts, without depending on a successful
-server read receipt. A newer reply can show a new banner. Read-state updates remove
-matching visible banners; dismissal alone leaves the conversation unread.
-
-If the host app receives APNs tokens, forward them to the messenger facade:
-
-```swift
-func application(
-    _ application: UIApplication,
-    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
-) {
-    Task { @MainActor in
-        BTX.messenger.setDeviceToken(deviceToken)
-    }
-}
-```
-
-If the host app handles remote notifications manually, give BTX first chance for BTX messenger payloads:
-
-```swift
-if BTX.isMessengerNotification(userInfo) {
-    Task { @MainActor in
-        _ = BTX.messenger.handleRemoteNotification(userInfo)
-    }
-    completionHandler(.noData)
-    return
-}
-```
-
-By default the SDK requests notification authorization the first time messenger is presented. Hosts that own the permission prompt can disable this:
-
-```swift
-BTXConfiguration(
-    publishableClientKey: "cfk_...",
-    messengerOptions: BTXMessengerOptions(
-        push: BTXPushConfiguration(
-            automaticallyRequestsAuthorization: false
-        )
-    )
-)
-```
-
-## Minimal Integration Diffs
-
-### Log Only
-
-```diff
-+ import BTXClientKit
-
-  func applicationDidFinishLaunching() {
-+     BTX.configure(
-+         BTXConfiguration(
-+             publishableClientKey: "cfk_...",
-+             features: [.logs]
-+         )
-+     )
-  }
-
-  func didSignIn(user: User) {
-+     BTX.identify(
-+         BTXCustomer(
-+             externalID: user.id,
-+             name: user.name,
-+             email: user.email
-+         )
-+     )
-  }
-
-  func trackCheckoutStarted(cart: Cart) {
-+     BTX.log(
-+         "checkout_started",
-+         properties: [
-+             "cartId": cart.id,
-+             "itemIds": cart.items.map(\.id)
-+         ]
-+     )
-  }
-```
-
-### Messenger Only
-
-```diff
-+ import BTXClientKit
-
-  func applicationDidFinishLaunching() {
-+     BTX.configure(
-+         BTXConfiguration(
-+             publishableClientKey: "cfk_...",
-+             features: [.messenger],
-+             messengerOptions: BTXMessengerOptions(
-+                 title: "Support",
-+                 teamDisplayName: "Support Team"
-+             )
-+         )
-+     )
-  }
-
-  func didSignIn(user: User) {
-+     BTX.identify(
-+         BTXCustomer(
-+             externalID: user.id,
-+             name: user.name,
-+             email: user.email
-+         )
-+     )
-  }
-
-  func openSupport() {
-+     BTX.messenger.present()
-  }
-```
-
-### Logs And Messenger
-
-```diff
-+ import BTXClientKit
-
-  func applicationDidFinishLaunching() {
-+     BTX.configure(
-+         BTXConfiguration(
-+             publishableClientKey: "cfk_...",
-+             messengerOptions: BTXMessengerOptions(
-+                 title: "Support",
-+                 teamDisplayName: "Support Team"
-+             )
-+         )
-+     )
-  }
-
-  func didSignIn(user: User) {
-+     BTX.identify(BTXCustomer(externalID: user.id, name: user.name, email: user.email))
-  }
-
-  func trackCheckoutStarted(cart: Cart) {
-+     BTX.log("checkout_started", properties: ["cartId": cart.id])
-  }
-
-  func openSupport() {
-+     BTX.messenger.present()
-  }
-```
-
-## Public Surface
-
-- `BTX.configure(_:)`
-- `BTX.identify(_:)`
-- `BTX.log(_:)`
-- `BTX.messenger`
-- `BTX.community`
-- `BTX.featureFlags`
-- `BTXFeatureFlagsState`
-- `BTX.isMessengerNotification(_:)`
-- `BTXConfiguration`
-- `BTXCustomer`
-- `BTXAppContext`
-- `BTXRuntimeContext`, `BTXHostAppRuntimeContext`,
-  `BTXOperatingSystemRuntimeContext`, `BTXHostDeviceRuntimeContext`,
-  `BTXRuntimeEnvironmentContext`, `BTXSDKRuntimeContext`, `BTXRuntimeIdentifier`
-- `BTXAppSnapshotReason`
-- `BTXClientKitVersion`
-- `BTXMessengerOptions`
-- `BTXCommunityOptions`
-- `BTXCommunityIdea`, `BTXCommunityReply`
-- `BTXCommunityPresentationResult`, `BTXCommunityPresentationFailure`
-- `BTXFeedbackOptions`
-- `BTXPushConfiguration`
-- `BTXTheme`, `BTXThemePreset`, `BTXThemePalette`, `BTXColorScheme`,
-  `BTXColor`, `BTXFont`, `BTXImageResource`,
-  `BTXPrimaryCTAStyle`, `BTXForegroundNotificationGlassStyle`
-  - `BTXTheme.light` and `.dark` provide complete appearances. Omit the theme
-    to keep the standard SDK appearance.
-  - `BTXThemePalette` maps six host-brand colors across every Messenger,
-    feedback, and Community surface.
-  - `BTXTheme.backgroundColor` controls embedded messenger backgrounds and derived theme colors. Floating Messenger, feedback, and Community sheets use neutral blur and untinted clear glass.
-  - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
-  - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor`
-    independently theme conversation-history rows. If a requested row fill
-    cannot maintain 4.5:1 contrast with both configured history text colors,
-    the SDK falls back to the themed surface color.
-  - `BTXTheme.emptyStateLogo` supplies shared artwork above the messenger home heading and in the new-message view. Homes without a logo omit the artwork; the new-message view uses a message symbol as its fallback.
-  - `BTXTheme.emptyStateLogoMaxWidth` and `emptyStateLogoMaxHeight` constrain that logo.
-  - `BTXTheme.emptyStateLogoToCTASpacing` controls the gap between the home logo and primary action.
-  - `BTXTheme.primaryCTAColor` controls primary action fill.
-  - `BTXTheme.primaryCTATextColor` controls primary action text and icon color.
-  - `BTXTheme.primaryCTAStyle` supports `.glass` and `.solid`.
-  - `BTXTheme.colorScheme` supports `.system`, `.light`, and `.dark` for hosts
-    whose fixed palette must not follow the device appearance.
-  - Message bubble, composer, and foreground-notification colors can be themed for light host apps. When a themed host omits the incoming bubble color, the SDK derives a subtle fill from the primary text color so operator messages remain distinct from the page background.
-  - Incoming and outgoing bubble fills are rendered opaquely. Translucent host bubble colors are first composited over `backgroundColor`, preserving their intended appearance without allowing live host content to show through.
-  - The standard appearance uses light customer bubbles with dark text and dark operator bubbles with light text. Explicit host bubble colors remain supported. Outgoing links use the bubble text color with an underline to remain readable against the fill.
-  - The composer input uses only its Liquid Glass surface; it never adds a static outline around the interactive glass shape.
-  - Foreground notifications show the replying operator's avatar when available,
-    with the banner-specific logo as a compact project badge. The same logo is
-    the fallback when no operator avatar is available.
-- `BTXImageLoader`, `BTXImageLoadContext`
-- `BTXLogInput`, `BTXLogLevel`, `BTXLogDisposition`, `BTXLogValueConvertible`, `BTXJSONValue`
-- `BTXLaunchContext`, `BTXMessengerEntryPoint`, `BTXPresentationRoute`
-- `BTXConversationPurpose`
-- `BTXThreadIntro`, `BTXThreadIntroRow`, `BTXThreadAttributeValue`, `BTXThreadAttribute`
-- `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
-
-`BTXRuntime` and the old `BTXCustomerMessenger*` client/service/view/modifier paths are implementation details, not host APIs.
-
-Cards without an image show text and actions without a logo or image placeholder.
-Only supplied card artwork is rendered; banners retain their project icon behavior.
-
-## In-app campaigns
+### In-app campaigns
 
 Show targeted announcements as native cards and banners. Customers can open an
 HTTPS link or a public Help Center article from a campaign. Help Center actions
@@ -832,9 +461,491 @@ See the [iOS integration guide](https://btx.so/docs/ios/in-app-campaigns) for se
 and testing, and the [campaign guide](https://btx.so/docs/campaigns/in-app) for
 creating campaigns, managing audiences, and reviewing results.
 
-## Campaign diagnostics
+### Campaign diagnostics
 
 BTXClientKit 3.4.2 adds specific failure reasons and presentation stages to campaign diagnostics. With telemetry logs
 enabled, a matching event links the failure to its campaign and delivery attempt.
 Temporary screen interruptions defer the campaign until a later foreground
 activation. No additional host configuration is required.
+
+### Log telemetry
+
+`BTX.log(...)` accepts immediately and sends later. It returns `.enqueued` from the static facade, not a network-delivery result. The SDK buffers logs until identity and runtime transport are ready.
+
+```swift
+BTX.log(
+    "checkout_started",
+    properties: [
+        "cartId": cart.id,
+        "itemIds": cart.items.map(\.id),
+        "totals": [
+            "subtotal": cart.subtotal,
+            "currency": cart.currency
+        ]
+    ]
+)
+```
+
+Properties can be strings, ints, doubles, bools, `nil`, arrays, dictionaries keyed by `String`, or explicit `BTXJSONValue` values.
+
+### Report physical devices
+
+Hosts only map their hardware-specific state into `BTXDeviceSnapshot`. The SDK owns
+coalescing, deduplication, lifecycle reasons, disconnect cancellation, and re-reporting
+an active device after the identified customer or BTX project changes.
+
+```swift
+BTX.deviceSnapshots.refresh(
+    connectionKey: peripheral.identifier.uuidString
+) {
+    BTXDeviceSnapshot(
+        identifiers: [
+            .vendorHardwareID(
+                wearable.hardwareID,
+                namespace: "example.hardware_uid"
+            ),
+            .serialNumber(
+                wearable.serialNumber,
+                namespace: "example.serial_number"
+            ),
+            .coreBluetoothPeripheralUUID(peripheral.identifier),
+        ],
+        manufacturer: "Example",
+        category: "wearable",
+        model: wearable.model,
+        firmwareVersion: wearable.firmwareVersion,
+        batteryPercent: wearable.batteryPercent
+    )
+}
+```
+
+The `connectionKey` stays local to the SDK and is never transmitted. Call
+`BTX.deviceSnapshots.disconnect(connectionKey:)` when that hardware connection ends.
+Never put pairing secrets, ownership tokens, or credentials in a device identifier.
+
+### Feature flags
+
+Feature flags load automatically after the SDK has a customer identity. Reads are synchronous and use the supplied fallback until the first evaluation is available or when a key is unknown.
+
+```swift
+let isEnabled = BTX.featureFlags.isEnabled(
+    "settings.messenger-entry.enabled",
+    fallback: false
+)
+```
+
+Subscribe when host UI must update after an evaluation or identity change:
+
+```swift
+let featureFlagsCancellable = BTX.featureFlags.onChange { state in
+    isMessengerEntryEnabled = state.isEnabled(
+        "settings.messenger-entry.enabled",
+        fallback: false
+    )
+}
+```
+
+`BTX.featureFlags.refresh()` explicitly refreshes the current identity's evaluation. Feature flags return to the unloaded state whenever the SDK configuration or customer identity changes.
+
+### Theme SDK surfaces
+
+Messenger, feedback, Community, and Help Center sheets use untinted clear Liquid Glass over
+a neutral system blur on iOS 26. Their color comes from the host content behind them;
+`backgroundColor` no longer adds an opaque color wash to these floating sheets.
+Older iOS versions use the system blur alone. Native materials respond to the
+host appearance and system accessibility settings. Text, controls, chat bubbles,
+and branding still use `BTXTheme`. Foreground notifications also default to
+untinted clear glass with neutral blur; hosts can explicitly choose `.regular`
+or set `foregroundNotificationMaterialOpacity` to apply their notification tint.
+
+No theme is required. To choose a complete SDK appearance, use a preset:
+
+```swift
+let messengerOptions = BTXMessengerOptions(
+    theme: .dark
+)
+```
+
+For host branding, map the six semantic colors the SDK needs. The palette keeps
+the Messenger, Community, and Help Center sheets, feedback form, bubbles, composers,
+controls, links, and foreground notifications aligned automatically:
+
+```swift
+let messengerOptions = BTXMessengerOptions(
+    theme: BTXTheme(
+        palette: BTXThemePalette(
+            background: BTXColor(red: 0.04, green: 0.05, blue: 0.06),
+            surface: BTXColor(red: 0.10, green: 0.11, blue: 0.12),
+            primaryText: BTXColor(red: 0.96, green: 0.97, blue: 0.98),
+            secondaryText: BTXColor(red: 0.68, green: 0.70, blue: 0.72),
+            accent: BTXColor(red: 0.36, green: 0.76, blue: 0.92),
+            accentForeground: BTXColor(red: 0.02, green: 0.03, blue: 0.04)
+        ),
+        colorScheme: .dark
+    )
+)
+```
+
+Use the detailed `BTXTheme` initializer only for deliberate per-surface
+exceptions such as custom artwork, fonts, or a special notification treatment.
+Message bubble fills are flattened against the configured messenger background,
+so both incoming and outgoing bubbles remain opaque over busy host content.
+
+### Messenger media attachments
+
+The composer negotiates attachment capabilities with the BTX session before
+enabling attachment controls. It enables only the image and video formats
+allowed for that customer session.
+
+- Images use paste or the native photo picker.
+- Videos use the same picker, are validated against the negotiated MIME
+  allowlist, and upload through BTX.
+- The system picker does not require full photo-library permission or an
+  `NSPhotoLibraryUsageDescription` entry.
+
+### Push notifications
+
+Push is optional. Messenger threads and foreground live updates work without APNs.
+
+When the app opens or returns to the foreground, unread support replies can show
+an in-app banner. Dismissing a reply or opening its conversation suppresses that
+reply's banner on the device across app restarts, without depending on a successful
+server read receipt. A newer reply can show a new banner. Read-state updates remove
+matching visible banners; dismissal alone leaves the conversation unread.
+
+If the host app receives APNs tokens, forward them to the messenger facade:
+
+```swift
+func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+) {
+    Task { @MainActor in
+        BTX.messenger.setDeviceToken(deviceToken)
+    }
+}
+```
+
+If the host app handles remote notifications manually, give BTX first chance for BTX messenger payloads:
+
+```swift
+if BTX.isMessengerNotification(userInfo) {
+    Task { @MainActor in
+        _ = BTX.messenger.handleRemoteNotification(userInfo)
+    }
+    completionHandler(.noData)
+    return
+}
+```
+
+By default the SDK requests notification authorization the first time messenger is presented. Hosts that own the permission prompt can disable this:
+
+```swift
+BTXConfiguration(
+    publishableClientKey: "cfk_...",
+    messengerOptions: BTXMessengerOptions(
+        push: BTXPushConfiguration(
+            automaticallyRequestsAuthorization: false
+        )
+    )
+)
+```
+
+### Minimal integration diffs
+
+#### Log only
+
+```diff
++ import BTXClientKit
+
+  func applicationDidFinishLaunching() {
++     BTX.configure(
++         BTXConfiguration(
++             publishableClientKey: "cfk_...",
++             features: [.logs]
++         )
++     )
+  }
+
+  func didSignIn(user: User) {
++     BTX.identify(
++         BTXCustomer(
++             externalID: user.id,
++             name: user.name,
++             email: user.email
++         )
++     )
+  }
+
+  func trackCheckoutStarted(cart: Cart) {
++     BTX.log(
++         "checkout_started",
++         properties: [
++             "cartId": cart.id,
++             "itemIds": cart.items.map(\.id)
++         ]
++     )
+  }
+```
+
+#### Messenger only
+
+```diff
++ import BTXClientKit
+
+  func applicationDidFinishLaunching() {
++     BTX.configure(
++         BTXConfiguration(
++             publishableClientKey: "cfk_...",
++             features: [.messenger],
++             messengerOptions: BTXMessengerOptions(
++                 title: "Support",
++                 teamDisplayName: "Support Team"
++             )
++         )
++     )
+  }
+
+  func didSignIn(user: User) {
++     BTX.identify(
++         BTXCustomer(
++             externalID: user.id,
++             name: user.name,
++             email: user.email
++         )
++     )
+  }
+
+  func openSupport() {
++     BTX.messenger.present()
+  }
+```
+
+#### Logs and Messenger
+
+```diff
++ import BTXClientKit
+
+  func applicationDidFinishLaunching() {
++     BTX.configure(
++         BTXConfiguration(
++             publishableClientKey: "cfk_...",
++             features: [.logs, .messenger],
++             messengerOptions: BTXMessengerOptions(
++                 title: "Support",
++                 teamDisplayName: "Support Team"
++             )
++         )
++     )
+  }
+
+  func didSignIn(user: User) {
++     BTX.identify(BTXCustomer(externalID: user.id, name: user.name, email: user.email))
+  }
+
+  func trackCheckoutStarted(cart: Cart) {
++     BTX.log("checkout_started", properties: ["cartId": cart.id])
+  }
+
+  func openSupport() {
++     BTX.messenger.present()
+  }
+```
+
+## macOS integration
+
+Follow the [macOS documentation](https://btx.so/docs/macos) for the complete
+SwiftUI and AppKit integration. macOS requires version 3.5.0 or later.
+
+### Configure macOS
+
+Call this once on the main actor during app startup. Use the publishable key
+from your **macOS** SDK client:
+
+```swift
+import BTXClientKit
+
+@MainActor
+func configureBTX() {
+    BTX.configure(
+        BTXConfiguration(
+            publishableClientKey: "cfk_...",
+            features: [.messenger]
+        )
+    )
+}
+```
+
+Identify the customer after sign-in with `BTX.identify(BTXCustomer(...))`, using
+the same stable account ID as your iOS app when both apps share a customer.
+The [customer identity guide](https://btx.so/docs/macos/identify-customers)
+shows sign-in and sign-out handling.
+
+### Register host windows
+
+Configure and identify through the same `BTX` facade, with `.messenger` and
+optional `.logs`. Pass the host's `BTXTheme` through `BTXMessengerOptions.theme`.
+Register each SwiftUI host window once. Replace `ContentView` with your app’s
+root view:
+
+```swift
+WindowGroup {
+    ContentView()
+        .btxMessenger()
+}
+```
+
+AppKit hosts register their window with `BTX.messenger.attach(to: window)`.
+
+### Present support and feedback
+
+Call either method from its own button or menu action:
+
+```swift
+BTX.messenger.presentSupport()
+BTX.messenger.presentFeedbackReport(includeScreenshot: true)
+```
+
+`presentSupport()` opens support inside the registered window.
+`presentFeedbackReport(includeScreenshot: true)` presents feedback with a
+removable capture of that app window. Presentation returns `.failed(.unavailable)`
+when no registered window can host the UI. Registration does not create another
+SDK runtime or customer session.
+
+The macOS renderer uses shared theme colors for surfaces, message bubbles,
+composers, controls, links, history, and CTAs, plus body/title/hero font overrides
+and light/dark/system appearance. Native Liquid Glass is available on macOS 26;
+earlier supported systems use native controls. Sessions, sync, read receipts,
+image uploads, reactions, and telemetry use the shared customer-app runtime.
+The native iOS and macOS adapters share message ordering, optimistic sends,
+failed-draft recovery, image preprocessing, rich text, and the durable feedback
+outbox. Feedback confirmation means it was saved on this device for delivery;
+network failures retry while the app is active and after relaunch. Preparation
+or local-save failures retain the editable draft. Pending reports remain scoped
+to the original API, client, and customer.
+
+Community, Help Center, campaign UI, contextual rating sheets, video capture,
+and image markup remain iOS-only. Manual text/image feedback and programmatic
+feedback submission are available on macOS.
+
+### macOS reply notifications
+
+The macOS integration supports APNs notifications for support and feedback replies.
+Configure BTX before the app finishes launching, and forward the host app's APNs
+token from its existing `NSApplicationDelegate`:
+
+```swift
+import AppKit
+import BTXClientKit
+
+@MainActor
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func application(
+        _ application: NSApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        BTX.messenger.setDeviceToken(deviceToken)
+    }
+}
+```
+
+Enable **Push Notifications** on the host app and use a matching signing profile.
+The SDK reads `com.apple.developer.aps-environment` from the signed app; it does
+not infer the macOS APNs environment from the build configuration. Set up a macOS
+client in BTX with the same bundle ID and its APNs credentials.
+
+The first support or feedback presentation requests notification permission by
+default. Set `BTXPushConfiguration(automaticallyRequestsAuthorization: false)`
+when the host owns permission timing and APNs registration. Keep the host's
+registration-failure callback for diagnostics.
+
+The SDK preserves the host notification delegate, including later replacements,
+and forwards unrelated notifications and notification-settings actions. BTX
+replies use native banners and sound in the foreground. A notification click
+waits for identification and a registered `.btxMessenger()` or AppKit host window,
+then activates that window and opens the matching thread. Passive delivery
+and dismissal do not open it. The existing `BTX.handleNotificationResponse(_:)`
+and `BTX.messenger` notification forwarding APIs are also available on macOS.
+
+Before signing out or switching customers, await
+`BTX.messenger.unregisterPushDevice()` while the current identity is active,
+then call `BTX.identify(nil)` or identify the next customer. The shared lifecycle
+cancels stale registration tasks, replays cached tokens for the next identity,
+and clears pending notification navigation from the previous identity.
+
+Normal reply delivery and operator test pushes require production APNs
+registrations.
+
+## Public surface
+
+Platform-specific availability is documented in the [iOS API reference](https://btx.so/docs/ios/reference)
+and [macOS API reference](https://btx.so/docs/macos/reference).
+
+- `BTX.configure(_:)`
+- `BTX.identify(_:)`
+- `BTX.log(_:)`
+- `BTX.messenger`
+- `BTX.community`
+- `BTX.featureFlags`
+- `BTXFeatureFlagsState`
+- `BTX.isMessengerNotification(_:)`
+- `BTXConfiguration`
+- `BTXCustomer`
+- `BTXAppContext`
+- `BTXRuntimeContext`, `BTXHostAppRuntimeContext`,
+  `BTXOperatingSystemRuntimeContext`, `BTXHostDeviceRuntimeContext`,
+  `BTXRuntimeEnvironmentContext`, `BTXSDKRuntimeContext`, `BTXRuntimeIdentifier`
+- `BTXAppSnapshotReason`
+- `BTXClientKitVersion`
+- `BTXMessengerOptions`
+- `BTXCommunityOptions`
+- `BTXCommunityIdea`, `BTXCommunityReply`
+- `BTXCommunityPresentationResult`, `BTXCommunityPresentationFailure`
+- `BTXFeedbackOptions`
+- `BTXPushConfiguration`
+- `BTXTheme`, `BTXThemePreset`, `BTXThemePalette`, `BTXColorScheme`,
+  `BTXColor`, `BTXFont`, `BTXImageResource`,
+  `BTXPrimaryCTAStyle`, `BTXForegroundNotificationGlassStyle`
+  - `BTXTheme.light` and `.dark` provide complete appearances. Omit the theme
+    to keep the standard SDK appearance.
+  - `BTXThemePalette` maps six host-brand colors across every Messenger,
+    feedback, and Community surface.
+  - `BTXTheme.backgroundColor` controls embedded messenger backgrounds and derived theme colors. Floating Messenger, feedback, and Community sheets use neutral blur and untinted clear glass.
+  - `BTXTheme.surfaceColor` controls themed cards and neutral surfaces.
+  - `BTXTheme.historyRowBackgroundColor` and `historyRowStrokeColor`
+    independently theme conversation-history rows. If a requested row fill
+    cannot maintain 4.5:1 contrast with both configured history text colors,
+    the SDK falls back to the themed surface color.
+  - `BTXTheme.emptyStateLogo` supplies shared artwork above the messenger home heading and in the new-message view. Homes without a logo omit the artwork; the new-message view uses a message symbol as its fallback.
+  - `BTXTheme.emptyStateLogoMaxWidth` and `emptyStateLogoMaxHeight` constrain that logo.
+  - `BTXTheme.emptyStateLogoToCTASpacing` controls the gap between the home logo and primary action.
+  - `BTXTheme.primaryCTAColor` controls primary action fill.
+  - `BTXTheme.primaryCTATextColor` controls primary action text and icon color.
+  - `BTXTheme.primaryCTAStyle` supports `.glass` and `.solid`.
+  - `BTXTheme.colorScheme` supports `.system`, `.light`, and `.dark` for hosts
+    whose fixed palette must not follow the device appearance.
+  - Message bubble, composer, and foreground-notification colors can be themed for light host apps. When a themed host omits the incoming bubble color, the SDK derives a subtle fill from the primary text color so operator messages remain distinct from the page background.
+  - Incoming and outgoing bubble fills are rendered opaquely. Translucent host bubble colors are first composited over `backgroundColor`, preserving their intended appearance without allowing live host content to show through.
+  - The standard appearance uses light customer bubbles with dark text and dark operator bubbles with light text. Explicit host bubble colors remain supported. Outgoing links use the bubble text color with an underline to remain readable against the fill.
+  - The composer input uses only its Liquid Glass surface; it never adds a static outline around the interactive glass shape.
+  - Foreground notifications show the replying operator's avatar when available,
+    with the banner-specific logo as a compact project badge. The same logo is
+    the fallback when no operator avatar is available.
+- `BTXImageLoader`, `BTXImageLoadContext`
+- `BTXLogInput`, `BTXLogLevel`, `BTXLogDisposition`, `BTXLogValueConvertible`, `BTXJSONValue`
+- `BTXLaunchContext`, `BTXMessengerEntryPoint`, `BTXPresentationRoute`
+- `BTXConversationPurpose`
+- `BTXThreadIntro`, `BTXThreadIntroRow`, `BTXThreadAttributeValue`, `BTXThreadAttribute`
+- `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
+
+`BTXRuntime` and the old `BTXCustomerMessenger*` client/service/view/modifier paths are implementation details, not host APIs.
+
+Cards without an image show text and actions without a logo or image placeholder.
+Only supplied card artwork is rendered; banners retain their project icon behavior.
+
+## Documentation and releases
+
+- [iOS documentation](https://btx.so/docs/ios)
+- [macOS documentation](https://btx.so/docs/macos)
+- [Release notes](https://github.com/secondcontext/btx-ios-sdk/releases)
+- [Anonymous Community example app](https://github.com/secondcontext/btx-ios-sdk/tree/main/Examples/AnonymousCommunityDemo)
