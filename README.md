@@ -6,7 +6,7 @@
   <a href="https://btx.so">btx.so</a>
 </p>
 
-<h1 align="center">BTX for iOS</h1>
+<h1 align="center">BTX for iOS and MacOS</h1>
 
 <p align="center">
   <strong>Support your customers. Understand their devices.</strong><br>
@@ -43,7 +43,7 @@
       <p>Put pairing, charging, and firmware guides where customers need them, inside your app.</p>
     </td>
     <td width="50%" valign="top">
-      <h3><a href="docs/feedback.md">Rage-shake feedback →</a></h3>
+      <h3><a href="docs/feedback.md">Shake For Feedback →</a></h3>
       <p>A shake opens an issue report with a screenshot the customer can review before sending.</p>
     </td>
   </tr>
