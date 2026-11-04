@@ -38,6 +38,8 @@ See [Help Center](help-center.md) for setup, contextual articles, and embedded v
 - `BTXRuntimeContext`, `BTXHostAppRuntimeContext`, `BTXOperatingSystemRuntimeContext`
 - `BTXHostDeviceRuntimeContext`, `BTXRuntimeEnvironmentContext`, `BTXSDKRuntimeContext`, `BTXRuntimeIdentifier`
 - `BTXAppSnapshotReason`
+- `BTX.deviceSnapshots`, `BTXDeviceSnapshotReporter`, `BTXDeviceSnapshot`
+- `BTXDeviceIdentifier`, `BTXDeviceSnapshotReason`
 
 See [telemetry](telemetry.md) and [hardware telemetry](device-telemetry.md).
 

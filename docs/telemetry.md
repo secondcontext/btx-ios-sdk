@@ -26,7 +26,7 @@ values below are sample device state; replace them with the state from your app.
 BTX.log(
     "device_connection_failed",
     properties: [
-        "deviceID": "ring_123",
+        "deviceId": "ring_123",
         "deviceModel": "Mithril One",
         "firmwareVersion": "2.3.7",
         "transport": "bluetooth",
@@ -49,7 +49,7 @@ Log the duration and outcome when a sync finishes:
 BTX.log(
     "device_sync_completed",
     properties: [
-        "deviceID": "ring_123",
+        "deviceId": "ring_123",
         "firmwareVersion": "2.3.7",
         "batteryPercent": 42,
         "durationMs": 1400,
@@ -84,6 +84,12 @@ You can supply explicit app version fields through `BTXConfiguration.appContext`
 - Prefer product IDs and bounded values over free-form data dumps.
 - Keep credentials, access tokens, and pairing secrets out of events.
 
-For apps that integrate physical hardware, see [hardware telemetry](device-telemetry.md).
+## Diagnose hardware
+
+Add [hardware telemetry](device-telemetry.md) when your app manages physical devices:
+
+- [Device health](device-health.md): report battery, charging, and firmware snapshots.
+- [Connection diagnostics](connection-diagnostics.md): record failure stages and recovery.
+- [Firmware update diagnostics](firmware-update-diagnostics.md): correlate updates and verify results.
 
 [All guides](README.md)

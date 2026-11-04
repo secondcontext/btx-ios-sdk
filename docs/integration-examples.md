@@ -38,7 +38,7 @@ func trackConnectionFailed(deviceID: String, firmwareVersion: String) {
     BTX.log(
         "device_connection_failed",
         properties: [
-            "deviceID": deviceID,
+            "deviceId": deviceID,
             "firmwareVersion": firmwareVersion
         ]
     )
@@ -117,7 +117,7 @@ func trackConnectionFailed(deviceID: String, firmwareVersion: String) {
     BTX.log(
         "device_connection_failed",
         properties: [
-            "deviceID": deviceID,
+            "deviceId": deviceID,
             "firmwareVersion": firmwareVersion
         ]
     )
