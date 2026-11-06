@@ -77,7 +77,9 @@ the signed-in customer.
 **3. Open Customer Messenger**
 
 Send a message from your app, reply from BTX, and see the thread update in the app.
-Foreground messaging works without push setup.
+Messaging works without push setup while the app is running. On macOS with SDK
+3.5.1 or later, an unread reply can show a toast in a visible registered window
+with Support closed, even when another app has focus.
 
 ---
 

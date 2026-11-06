@@ -110,8 +110,12 @@ when the host owns permission timing and APNs registration. Keep the host's
 registration-failure callback for diagnostics.
 
 The SDK preserves the host notification delegate, including later replacements,
-and forwards unrelated notifications and notification-settings actions. BTX
-replies use native banners and sound in the foreground. A notification click
+and forwards unrelated notifications and notification-settings actions. In
+3.5.1 and later, with the support panel closed, replies show a toast inside a
+visible registered window, even when another app has focus. A fully covered,
+hidden, or minimized window can show the toast when it becomes visible again.
+APNs provides native
+notifications while the app is in the background. A notification click
 waits for identification and a registered `.btxMessenger()` or AppKit host window,
 then activates that window and opens the matching thread. Passive delivery
 and dismissal do not open it. The existing `BTX.handleNotificationResponse(_:)`
