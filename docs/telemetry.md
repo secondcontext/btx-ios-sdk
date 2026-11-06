@@ -74,7 +74,11 @@ It excludes advertising identifiers, `identifierForVendor`, the user-assigned
 device name, and stable personal device identifiers.
 
 Use `BTXAppContext.current()` when you need the standardized snapshot directly.
-You can supply explicit app version fields through `BTXConfiguration.appContext`.
+Pass safe host settings through `BTXAppContext.current(attributes:)`. The startup
+snapshot includes those values in its `attributes` object. You can supply
+explicit app version fields through `BTXConfiguration.appContext`.
+With logs off, Messenger sends explicitly configured app version and build with
+messages and feedback. The SDK buffers logs during startup when logs are enabled.
 
 ## Keep events useful
 
