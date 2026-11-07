@@ -44,7 +44,7 @@
     </td>
     <td width="50%" valign="top">
       <h3><a href="docs/feedback.md">Shake For Feedback →</a></h3>
-      <p>A shake opens an issue report with a screenshot the customer can review before sending.</p>
+      <p>A shake opens an issue report with a screenshot the customer can review before sending. Customers can also take a camera photo; add NSCameraUsageDescription to the host app’s Info.plist.</p>
     </td>
   </tr>
   <tr>

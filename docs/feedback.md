@@ -8,6 +8,8 @@ before sending it.
 Rage-shake is available on iOS. Mac apps can open the same kind of
 [feedback report from a button or menu action](macos.md#present-support-and-feedback).
 
+Camera capture requires `NSCameraUsageDescription` in the host app’s Info.plist. The camera button requests permission on first use. If access is denied, the customer can enable it in Settings; devices without a camera can still attach library media. Captured photos use the same attachment limits, previews, and image processing as library photos.
+
 ## Enable rage-shake
 
 After the [quickstart](quickstart.md), add the feedback options to your existing
@@ -35,7 +37,7 @@ capturing the active app window.
 
 1. A deliberate shake opens a compact confirmation prompt.
 2. Continuing opens the feedback composer with the optional screenshot.
-3. The customer can edit the screenshot, remove it, attach media, and describe the issue.
+3. The customer can edit the screenshot, remove it, attach media, take a camera photo, and describe the issue.
 4. **Send** saves the report on the device and closes the composer.
 
 Captured media stays local until the customer sends the report. Dismissing the
