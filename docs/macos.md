@@ -78,6 +78,16 @@ insets and rounded corners. A nil height fills the available space. Oversized
 panels shrink to fit. Support and reply toasts respect the insets. Feedback
 uses the panel styling in a centered modal inside the host window.
 
+In SDK 3.7.0, `BTXMacOSPanelStyle` also accepts `headerDividerColor` (nil hides
+it), `primaryButtonLetterSpacing` and `threadLabelLetterSpacing` (points, default
+0), `timestampFont` (optional `BTXFont`), `messageBubbleStrokeColor` (optional
+1-point stroke), `composerCornerRadius` (default 16), and `composerStrokeColor`
+(defaults to the theme's composer control stroke). These controls style support
+and feedback where applicable. Invalid numeric values use safe defaults.
+The thread count appears directly beside Threads. Team photos fall back to
+customer-visible initials while loading or on failure, including members without
+photos when returned by the backend. No email address is used for initials.
+
 For a window with a changing footer, supply a per-window override. Updating the
 value preserves the open thread and draft.
 

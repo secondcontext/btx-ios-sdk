@@ -94,3 +94,7 @@ On macOS, `BTXMessengerOptions.macOS` groups optional panel presentation, panel
 styling, and compact home layout controls. Window-specific insets can change
 while Support is open, preserving the thread and draft. See the
 [macOS guide](docs/macos.md#customize-native-presentation).
+SDK 3.7.0 also supports an optional header divider, button and Threads-label letter
+spacing, timestamp font, bubble stroke, and composer radius and stroke through
+`BTXMacOSPanelStyle`. The thread count sits beside its label, and team avatars use
+customer-visible initials while photos load or fail.
