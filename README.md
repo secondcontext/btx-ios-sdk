@@ -89,3 +89,8 @@ with Support closed, even when another app has focus.
 
 Enable only what your app needs. Customer Messenger is enabled by default;
 Help Center, telemetry, and automatic feedback triggers are opt-in.
+
+On macOS, `BTXMessengerOptions.macOS` groups optional panel presentation, panel
+styling, and compact home layout controls. Window-specific insets can change
+while Support is open, preserving the thread and draft. See the
+[macOS guide](docs/macos.md#customize-native-presentation).

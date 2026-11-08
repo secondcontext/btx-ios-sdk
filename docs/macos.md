@@ -47,6 +47,55 @@ WindowGroup {
 
 AppKit hosts register their window with `BTX.messenger.attach(to: window)`.
 
+## Customize native presentation
+
+In SDK 3.6.0 and later, pass the optional Mac controls through your existing
+`BTXMessengerOptions`. All have defaults.
+
+```swift
+let options = BTXMessengerOptions(
+    teamDisplayName: "Acme Support",
+    emptyPromptTitle: "",
+    macOS: BTXMacOSMessengerOptions(
+        presentation: BTXMacOSPanelPresentation(
+            corner: .bottomTrailing,
+            width: 440,
+            height: nil,
+            insets: .init(top: 90, leading: 24, bottom: 60, trailing: 24)
+        ),
+        panelStyle: BTXMacOSPanelStyle(
+            cornerRadius: 0,
+            strokeColor: BTXColor(red: 0.5, green: 0.5, blue: 0.5),
+            showsShadow: false
+        ),
+        homeLayout: .compact
+    )
+)
+```
+
+The default support panel is bottom trailing, 440 by 584 points, with 16-point
+insets and rounded corners. A nil height fills the available space. Oversized
+panels shrink to fit. Support and reply toasts respect the insets. Feedback
+uses the panel styling in a centered modal inside the host window.
+
+For a window with a changing footer, supply a per-window override. Updating the
+value preserves the open thread and draft.
+
+```swift
+ContentView()
+    .btxMessenger(presentation: BTXMacOSPanelPresentation(
+        insets: .init(bottom: footerHeight + 16)
+    ))
+```
+
+AppKit hosts can call `BTX.messenger.attach(to: window, presentation: layout)`
+again when their layout changes. Calling it without presentation preserves the
+existing window override.
+
+Compact home uses a label-width action. The action and Threads header stay fixed
+while rows scroll. The count describes loaded threads. Blank headings and
+headings matching the action label are hidden in both layouts.
+
 ## Present support and feedback
 
 Call either method from its own button or menu action:
