@@ -5,6 +5,8 @@ For Mac apps, use the [macOS APNs adapter](macos.md#macos-reply-notifications).
 
 Push is optional. Messenger threads and foreground live updates work without APNs.
 
+BTX handles messenger notifications and forwards other notifications to your app’s delegate. If your SwiftUI app uses `UIApplicationDelegateAdaptor`, keep handling silent pushes in that delegate as usual.
+
 When the app opens or returns to the foreground, unread support replies can show
 an in-app banner. Dismissing a reply or opening its conversation suppresses that
 reply's banner on the device across app restarts, without depending on a successful
