@@ -98,3 +98,43 @@ SDK 3.7.0 also supports an optional header divider, button and Threads-label let
 spacing, timestamp font, bubble stroke, and composer radius and stroke through
 `BTXMacOSPanelStyle`. The thread count sits beside its label, and team avatars use
 customer-visible initials while photos load or fail.
+
+**Image campaigns on iOS** require 3.8.0 or later. Customers tap the artwork to
+open the campaign action and use the close button to dismiss it. See
+[In-app campaigns](docs/additional-features.md#in-app-campaigns).
+
+## Attach a trace to feedback (3.8.0)
+
+For thumbs up/down feedback on an AI result, pass `traceID` directly to
+`submitFeedback(...)` or the contextual `presentFeedbackReport(...)` overload:
+
+```swift
+let context = BTXLaunchContext(
+    conversationPurpose: .feedback,
+    sourceType: "reply_draft",
+    sourceID: traceID
+)
+
+await BTX.messenger.submitFeedback(
+    rating: .positive,
+    launchContext: context,
+    traceID: traceID
+)
+
+BTX.messenger.presentFeedbackReport(
+    rating: .negative,
+    prompt: BTXFeedbackPrompt(subject: "Reply draft", question: "What went wrong?"),
+    launchContext: context,
+    traceID: traceID
+)
+```
+
+The SDK carries the reference with the feedback; it does not upload the trace.
+Use a nonzero, 32-character hexadecimal trace ID.
+Valid trace IDs are normalized to lowercase. Invalid explicit IDs are discarded
+without blocking feedback; any existing trace reference in the supplied context
+is cleared. Other report data is preserved. Omit `traceID` to preserve the supplied
+launch context. A stable `sourceType` and `sourceID` keep rating changes for the
+same draft in one feedback thread.
+V1 attaches traces only through explicit contextual feedback; automatic shake
+and screenshot reports do not attach a trace.

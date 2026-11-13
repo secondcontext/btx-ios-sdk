@@ -43,13 +43,17 @@ off.
 
 ## In-app campaigns
 
-Show targeted announcements as native cards and banners. Customers can open an
+Show targeted announcements as native cards, banners, and full-image campaigns. Customers can open an
 HTTPS link or a public Help Center article from a campaign. Help Center actions
 require `.helpCenter`.
 
 In-app campaigns require BTXClientKit 3.3.1 or later and campaign access for your
 project. Check [GitHub Releases](https://github.com/secondcontext/btx-ios-sdk/releases)
 for available SDK versions.
+
+Image campaigns require 3.8.0 or later. They fill a 5:8 frame using the crop set
+in BTX. Tapping the image opens the campaign action. The top-right close button
+dismisses the campaign. Earlier SDK versions skip Image deliveries.
 
 Add `.inAppCampaigns` to your configuration and identify the signed-in customer:
 
@@ -81,7 +85,7 @@ BTX.inAppCampaigns.setPresentationReady(false)
 BTX.identify(nil)
 ```
 
-The SDK automatically attempts at most one card or banner when the app launches
+The SDK automatically attempts at most one campaign when the app launches
 and each time it returns from the background. On return, it waits two seconds and
 requires host readiness and a safe active window. An internet connection is required. Active campaigns are considered in queue order;
 paused campaigns keep their position when resumed. Content edits apply to pending
@@ -109,7 +113,7 @@ Card actions also use `titleFont` and the Messenger primary CTA colors and style
 Register custom fonts in your app before using them. Banner bodies show at most
 two lines; tapping the content opens the action, and the close button dismisses it.
 
-Cards and banners prepare artwork before appearing, so images and text display
+Campaigns prepare artwork before appearing, so images and text display
 together. Banners use the project logo when no custom artwork is set. If artwork
 cannot be loaded, the campaign stays hidden and can retry on a later launch or
 return from the background. Artwork downloads are limited to 10 MiB.

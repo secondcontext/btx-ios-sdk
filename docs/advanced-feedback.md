@@ -82,6 +82,15 @@ BTX.messenger.presentFeedbackReport(
 )
 ```
 
+## Attach a trace to contextual feedback
+
+Starting in 3.8.0, pass the optional `traceID` to `submitFeedback(...)` or the
+contextual `presentFeedbackReport(...)` overload to associate a report with a
+BTX trace. Use a nonzero, 32-character hexadecimal ID. The SDK sends the trace
+reference with the report and clears any previous trace reference if an
+explicitly supplied ID is invalid. Omitting `traceID` preserves the supplied
+launch context. Automatic shake and screenshot reports do not attach traces.
+
 ## Shake detection
 
 Physical devices use Core Motion user acceleration, excluding gravity. BTX

@@ -20,6 +20,8 @@ Start with the [iOS quickstart](quickstart.md) or [macOS guide](macos.md).
 - `BTXThreadIntro`, `BTXThreadIntroRow`, `BTXThreadAttributeValue`, `BTXThreadAttribute`
 - `BTXConversationStarterSection`, `BTXConversationStarter`, `BTXConversationStarterProvider`
 - `BTX.isMessengerNotification(_:)`, `BTXPushConfiguration`
+- `submitFeedback(...)` and the contextual `presentFeedbackReport(...)` accept
+  an optional `traceID` in 3.8.0.
 
 See [Customer Messenger](customer-messenger.md), [rage-shake feedback](feedback.md),
 [advanced feedback](advanced-feedback.md), and [push notifications](push-notifications.md).
@@ -63,6 +65,7 @@ See [theming](theming.md) for presets, brand colors, artwork, and surface option
 - `BTX.community`, `BTXCommunityOptions`
 - `BTXCommunityIdea`, `BTXCommunityReply`
 - `BTXCommunityPresentationResult`, `BTXCommunityPresentationFailure`
+- `BTX.inAppCampaigns.setPresentationReady(_:)`, `BTXInAppCampaignOptions`
 
 See [Community and Campaigns](additional-features.md).
 
