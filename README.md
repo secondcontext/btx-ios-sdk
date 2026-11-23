@@ -67,7 +67,7 @@
 https://github.com/secondcontext/btx-ios-sdk.git
 ```
 
-Select **3.5.0 or later** and add the **BTXClientKit** product to your app target.
+Select **3.8.1 or later** and add the **BTXClientKit** product to your app target.
 
 **2. Configure and identify**
 
@@ -103,38 +103,50 @@ customer-visible initials while photos load or fail.
 open the campaign action and use the close button to dismiss it. See
 [In-app campaigns](docs/additional-features.md#in-app-campaigns).
 
-## Attach a trace to feedback (3.8.0)
+## Attach a trace to a topic
 
-For thumbs up/down feedback on an AI result, pass `traceID` directly to
-`submitFeedback(...)` or the contextual `presentFeedbackReport(...)` overload:
+Pass an AI result's nonzero, 32-character OpenTelemetry trace ID on the shared
+launch context. The SDK shows it on the feedback topic; desktop reads the same
+attachment. No custom attributes or trace rows are needed.
 
 ```swift
 let context = BTXLaunchContext(
     conversationPurpose: .feedback,
     sourceType: "reply_draft",
-    sourceID: traceID
-)
-
-await BTX.messenger.submitFeedback(
-    rating: .positive,
-    launchContext: context,
-    traceID: traceID
+    sourceID: draft.id,
+    traceID: draft.traceID,
+    threadIntro: .card(title: "Reply draft", subtitle: draft.text)
 )
 
 BTX.messenger.presentFeedbackReport(
     rating: .negative,
     prompt: BTXFeedbackPrompt(subject: "Reply draft", question: "What went wrong?"),
-    launchContext: context,
-    traceID: traceID
+    launchContext: context
 )
 ```
 
-The SDK carries the reference with the feedback; it does not upload the trace.
-Use a nonzero, 32-character hexadecimal trace ID.
-Valid trace IDs are normalized to lowercase. Invalid explicit IDs are discarded
-without blocking feedback; any existing trace reference in the supplied context
-is cleared. Other report data is preserved. Omit `traceID` to preserve the supplied
-launch context. A stable `sourceType` and `sourceID` keep rating changes for the
-same draft in one feedback thread.
-V1 attaches traces only through explicit contextual feedback; automatic shake
-and screenshot reports do not attach a trace.
+The same context works with `submitFeedback`, messenger entry points, and other
+cards. The feedback methods also accept `traceID` directly as a convenience.
+IDs are normalized to lowercase. Invalid explicit IDs clear a stale attachment
+without blocking feedback or changing its topic. An optional `traceTimestamp`
+accepts the known AI interaction time to narrow provider reads; it is not needed
+to attach or display the ID. Feedback and queued retries retain the reference.
+The SDK does not export traces or handle Langfuse credentials. A stable
+`sourceType` and `sourceID` keep rating changes for the same AI result in one
+feedback thread. Generic shake and screenshot reports do not select a trace.
+
+## Request recovery
+
+Invalid keys and mismatched app identifiers stop automatic requests for that
+configuration. Correct the client configuration before retrying; creating a new
+controller or identifying another customer does not reset the block. A new app
+process starts with a fresh authentication probe.
+
+Temporary failures use randomized delays around two and four seconds. Three
+failed attempts pause automatic requests for at least five minutes before one
+recovery probe. Server `Retry-After` values remain the minimum wait. Messenger
+requests share one session renewal after an expired bearer token and replay once;
+a rejected replay stops recovery for that token. Forbidden operations do not
+renew credentials. Read retries have a 20-second budget. Writes are not replayed
+after uncertain network failures. Pending messages retain their identifiers.
+Telemetry timers pause in the background and retain cooldowns on foregrounding.

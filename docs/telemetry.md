@@ -97,3 +97,14 @@ Add [hardware telemetry](device-telemetry.md) when your app manages physical dev
 - [Firmware update diagnostics](firmware-update-diagnostics.md): correlate updates and verify results.
 
 [All guides](README.md)
+
+
+## Delivery failures
+
+Invalid client keys and mismatched app identifiers stop automatic delivery until
+the configuration changes or the app process restarts. Recreating the messenger
+or identifying another customer does not reset a rejected configuration.
+Temporary failures use bounded retries with randomized delays, then pause for at
+least five minutes before a recovery probe. Server cooldowns remain the minimum
+wait. Automatic delivery timers pause in the background. Pending logs remain
+bounded in memory; they are not a durable archive across process termination.

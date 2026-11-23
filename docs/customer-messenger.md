@@ -25,6 +25,26 @@ conversation UI and is removed as soon as an operator reply arrives. Project
 administrators control the enabled state, message, and delay in BTX; no host-app
 configuration is required.
 
+## Reply alerts and unread badges
+
+In SDK 3.8.1, the first successful history sync quietly restores existing unread
+threads. Later eligible replies show an in-app banner while the app is active
+and Messenger is closed. One thread shows its sender and reply preview; multiple
+threads show one grouped alert. Opening a grouped alert opens the unread-first
+thread list without marking every thread read. Opening a single alert opens that
+thread. Existing threads include a back button to return to the list.
+
+Closing or opening a banner acknowledges every reply represented by that banner
+on this installation, including across app restarts. Dismissal leaves threads
+unread. A newer reply can trigger a fresh banner; older or missing-ID push
+replays cannot undo that acknowledgement. The first-sync baseline is scoped to
+the identified customer on this installation.
+
+`BTX.messenger.unreadCount` counts unread threads, including threads whose banners
+were dismissed. Use it to show a badge on your Support control and hide the badge
+when the count is zero. The banner count includes only eligible unacknowledged
+threads, so it can differ from the badge. Reading a thread reduces the badge.
+
 ## Open support from a device error
 
 When pairing or reconnection fails, include the affected device and its current

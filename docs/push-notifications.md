@@ -7,11 +7,12 @@ Push is optional. Messenger threads and foreground live updates work without APN
 
 BTX handles messenger notifications and forwards other notifications to your app’s delegate. If your SwiftUI app uses `UIApplicationDelegateAdaptor`, keep handling silent pushes in that delegate as usual.
 
-When the app opens or returns to the foreground, unread support replies can show
-an in-app banner. Dismissing a reply or opening its conversation suppresses that
-reply's banner on the device across app restarts, without depending on a successful
-server read receipt. A newer reply can show a new banner. Read-state updates remove
-matching visible banners; dismissal alone leaves the conversation unread.
+SDK 3.8.1 quietly baselines historical unread threads on first sync. Later
+eligible replies can show a single or grouped in-app banner. Dismissing or opening
+a banner acknowledges its displayed replies across app restarts without marking
+all threads read. Delayed or missing-ID push replays do not restore acknowledged
+alerts. A newer reply can show a fresh banner. See
+[reply alerts and unread badges](customer-messenger.md#reply-alerts-and-unread-badges).
 
 If the host app receives APNs tokens, forward them to the messenger facade:
 
