@@ -67,7 +67,7 @@
 https://github.com/secondcontext/btx-ios-sdk.git
 ```
 
-Select **3.8.1 or later** and add the **BTXClientKit** product to your app target.
+Select **3.8.2 or later** and add the **BTXClientKit** product to your app target.
 
 **2. Configure and identify**
 
@@ -102,6 +102,9 @@ customer-visible initials while photos load or fail.
 **Image campaigns on iOS** require 3.8.0 or later. Customers tap the artwork to
 open the campaign action and use the close button to dismiss it. See
 [In-app campaigns](docs/additional-features.md#in-app-campaigns).
+
+Opening the thread list acknowledges current reply alerts without marking
+threads read. Use the unread count to show a badge or dot until replies are read.
 
 ## Attach a trace to a topic
 

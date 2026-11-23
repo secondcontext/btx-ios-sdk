@@ -40,6 +40,11 @@ unread. A newer reply can trigger a fresh banner; older or missing-ID push
 replays cannot undo that acknowledgement. The first-sync baseline is scoped to
 the identified customer on this installation.
 
+In SDK 3.8.2 and later, opening the thread list from any entry point also
+acknowledges its reply alerts. Replies loaded while that list is visible are
+acknowledged too. This keeps the banner dismissed across app restarts without
+marking those threads read; unread badges remain until the threads are read.
+
 `BTX.messenger.unreadCount` counts unread threads, including threads whose banners
 were dismissed. Use it to show a badge on your Support control and hide the badge
 when the count is zero. The banner count includes only eligible unacknowledged

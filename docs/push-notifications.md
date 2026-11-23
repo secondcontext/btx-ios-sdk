@@ -11,7 +11,8 @@ SDK 3.8.1 quietly baselines historical unread threads on first sync. Later
 eligible replies can show a single or grouped in-app banner. Dismissing or opening
 a banner acknowledges its displayed replies across app restarts without marking
 all threads read. Delayed or missing-ID push replays do not restore acknowledged
-alerts. A newer reply can show a fresh banner. See
+alerts. In SDK 3.8.2 and later, opening the thread list also acknowledges its
+reply alerts while keeping threads unread. A newer reply can show a fresh banner. See
 [reply alerts and unread badges](customer-messenger.md#reply-alerts-and-unread-badges).
 
 If the host app receives APNs tokens, forward them to the messenger facade:
